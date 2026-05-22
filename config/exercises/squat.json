@@ -1,0 +1,66 @@
+{
+  "exercise_name": "Squat",
+  "target_joints": {
+    "primary": ["RIGHT_HIP", "RIGHT_KNEE", "RIGHT_ANKLE"],
+    "fault_1": []
+  },
+  "phases": {
+    "start": {
+      "angle": 160,
+      "threshold": 15,
+      "type": "greater_than"
+    },
+    "end": {
+      "angle": 90,
+      "threshold": 15,
+      "type": "less_than"
+    }
+  },
+  "form_faults": [
+    {
+      "name": "Knee Valgus",
+      "view": "front",
+      "type": "distance_ratio",
+      "joints_1": ["LEFT_KNEE", "RIGHT_KNEE"],
+      "joints_2": ["LEFT_ANKLE", "RIGHT_ANKLE"],
+      "condition": "less_than",
+      "threshold": 0.8,
+      "feedback_message": "Push your knees out! They are caving in."
+    },
+    {
+      "name": "Excessive Forward Lean",
+      "view": "side",
+      "active_phases": ["end"],
+      "type": "segment_angle",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_HIP"],
+      "axis": "vertical",
+      "max_angle": 75,
+      "feedback_message": "Keep your chest up! Don't lean too far forward."
+    },
+    {
+      "name": "Hip Flexion Bottom",
+      "view": "side",
+      "active_phases": ["end"],
+      "type": "angle_range",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_HIP", "RIGHT_KNEE"],
+      "min_angle": 60,
+      "max_angle": 120,
+      "feedback_message": "Your hips are collapsing! Maintain a neutral spine."
+    },
+    {
+      "name": "Heel Lift",
+      "type": "joint_movement_y",
+      "joint": "RIGHT_HEEL",
+      "threshold": 0.05,
+      "feedback_message": "Keep your heels flat on the floor!"
+    },
+    {
+      "name": "Back_Rounding",
+      "view": "side",
+      "type": "angle_range",
+      "joints": ["RIGHT_EAR", "RIGHT_SHOULDER", "RIGHT_HIP"],
+      "min_angle": 140,
+      "feedback_message": "Keep your back straight! Do not round your upper back."
+    }
+  ]
+}

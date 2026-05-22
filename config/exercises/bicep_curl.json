@@ -1,0 +1,37 @@
+{
+  "exercise_name": "Bicep Curl",
+  "target_joints": {
+    "primary": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+    "fault_1": ["RIGHT_HIP", "RIGHT_SHOULDER", "RIGHT_ELBOW"]
+  },
+  "phases": {
+    "start": {
+      "angle": 160,
+      "threshold": 15,
+      "type": "greater_than"
+    },
+    "end": {
+      "angle": 30,
+      "threshold": 15,
+      "type": "less_than"
+    }
+  },
+  "form_faults": [
+    {
+      "name": "Shoulder_Swing",
+      "type": "joint_movement_x",
+      "joint": "RIGHT_SHOULDER",
+      "threshold": 0.05,
+      "feedback_message": "Keep your shoulder still!"
+    },
+    {
+      "name": "Back_Sway",
+      "type": "segment_angle",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_HIP"],
+      "axis": "vertical",
+      "max_angle": 20,
+      "feedback_message": "Do not lean back! Keep your torso upright and back straight.",
+      "active_phases": ["end"]
+    }
+  ]
+}

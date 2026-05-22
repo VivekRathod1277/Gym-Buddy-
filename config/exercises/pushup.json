@@ -1,0 +1,49 @@
+{
+  "exercise_name": "Pushup",
+  "target_joints": {
+    "primary": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+    "fault_1": []
+  },
+  "phases": {
+    "start": {
+      "angle": 150,
+      "threshold": 20,
+      "type": "greater_than"
+    },
+    "end": {
+      "angle": 90,
+      "threshold": 20,
+      "type": "less_than"
+    }
+  },
+  "form_faults": [
+    {
+      "name": "Neck_Position",
+      "type": "angle_range",
+      "joints": ["RIGHT_EAR", "RIGHT_SHOULDER", "RIGHT_HIP"],
+      "min_angle": 135,
+      "feedback_message": "Keep your neck neutral and do not drop your head.",
+      "view": "side"
+    },
+    {
+      "name": "Sagging_Back",
+      "type": "segment_angle",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_HIP"],
+      "axis": "horizontal",
+      "max_angle": 20,
+      "feedback_message": "Keep your back flat! Your hips are sagging down.",
+      "view": "side"
+    },
+    {
+      "name": "Piked_Hips",
+      "type": "segment_angle",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_HIP"],
+      "axis": "horizontal",
+      "min_angle": 0,
+      "max_angle": 5,
+      "feedback_message": "Lower your hips! Your back is piked up too high.",
+      "view": "side",
+      "active_phases": ["start"]
+    }
+  ]
+}

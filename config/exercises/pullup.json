@@ -1,0 +1,46 @@
+{
+  "exercise_name": "Pullup",
+  "target_joints": {
+    "primary": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
+  },
+  "phases": {
+    "start": {
+      "angle": 165,
+      "threshold": 15,
+      "type": "greater_than"
+    },
+    "end": {
+      "angle": 55,
+      "threshold": 15,
+      "type": "less_than"
+    }
+  },
+  "form_faults": [
+    {
+      "name": "Leg_Kicking",
+      "type": "joint_movement_x",
+      "joint": "RIGHT_HIP",
+      "threshold": 0.1,
+      "feedback_message": "Keep your lower body still and avoid kicking."
+    },
+    {
+      "name": "Partial_Rep",
+      "type": "angle_range",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+      "min_angle": 60,
+      "max_angle": 120,
+      "active_phases": ["end"],
+      "feedback_message": "Pull higher! Get your chin over the bar."
+    },
+    {
+      "name": "Back_Arch",
+      "type": "segment_angle",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_HIP"],
+      "axis": "vertical",
+      "max_angle": 25,
+      "feedback_message": "Keep your back straight! Do not over-arch your lower back.",
+      "view": "side",
+      "active_phases": ["end"]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+# Secrets & Environment
+.env
+
+# Local SQLite Database
+gym_ai.db
+
+# Python Caches & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+env/
+
+# Logs, Diagnostics & Temp files
+*.log
+*traceback.txt
+traceback_solutions.txt
+session_export.json
+
+# IDE / Editor Configs
+.vscode/
+.idea/
+
+# OS specific files
+Thumbs.db
+db.db
+Desktop.ini
+.DS_Store
