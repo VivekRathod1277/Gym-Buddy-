@@ -3,7 +3,7 @@ import sys
 
 try:
     import main
-    sys.argv = ["main.py", "videoplayback (1).mp4", "squat.json"]
+    sys.argv = ["main.py", "Untitled design~2.mp4", "pushup.json", "--slow"]
     main.main()
 except Exception:
     with open("main_traceback.txt", "w") as f:

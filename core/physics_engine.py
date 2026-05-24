@@ -72,6 +72,27 @@ class PhysicsEngine:
             self.reference_landmarks = parsed
             return None # Wait for first full frame
             
+        # --- ACTIVE EXERCISE STANCE DETECTION ---
+        # For Pushups: if torso is vertical (angle between 30 and 150 degrees), the user is setting up or standing.
+        # Do not count reps or report posture faults during this setup phase.
+        if self.blueprint['exercise_name'].lower() == 'pushup':
+            # Calculate torso angle relative to horizontal
+            a_sh = parsed['RIGHT_SHOULDER']
+            b_hp = parsed['RIGHT_HIP']
+            c_hz = [a_sh[0] + 0.1, a_sh[1]]
+            torso_ang = self.calculate_angle(b_hp[:2], a_sh[:2], c_hz)
+            if 30.0 < torso_ang < 150.0:
+                # Return empty frame evaluation data during setup phase
+                primary_joints = self.blueprint['target_joints']['primary']
+                a_name, b_name, c_name = primary_joints
+                cur_ang = self.calculate_angle(parsed[a_name], parsed[b_name], parsed[c_name])
+                return {
+                    "angle": cur_ang,
+                    "reps": self.reps,
+                    "state": self.current_state,
+                    "active_fault": None
+                }
+            
         # 1. Rep counting logic
         primary_joints = self.blueprint['target_joints']['primary']
         a_name, b_name, c_name = primary_joints
@@ -107,6 +128,7 @@ class PhysicsEngine:
         
         # 2. Form faults evaluation
         active_fault = None
+
         for fault in self.blueprint['form_faults']:
             # View filtering
             if 'view' in fault and fault['view'] != self.current_view:
@@ -185,16 +207,38 @@ class PhysicsEngine:
                 axis = fault.get('axis', 'vertical')
                 if axis == 'vertical':
                     c = np.array([a[0], a[1] + 0.1])
+                    s_angle = self.calculate_angle(b, a, c)
+                    
+                    is_fault = False
+                    if 'min_angle' in fault and s_angle < fault['min_angle']:
+                        is_fault = True
+                    if 'max_angle' in fault and s_angle > fault['max_angle']:
+                        is_fault = True
                 else: 
                     c = np.array([a[0] + 0.1, a[1]])
+                    s_angle = self.calculate_angle(b, a, c)
+                    # Normalize horizontal angle to range 0-90 degrees to support both facing left/right directions
+                    s_angle = min(s_angle, 180.0 - s_angle)
                     
-                s_angle = self.calculate_angle(b, a, c)
-                
-                is_fault = False
-                if 'min_angle' in fault and s_angle < fault['min_angle']:
-                    is_fault = True
-                if 'max_angle' in fault and s_angle > fault['max_angle']:
-                    is_fault = True
+                    is_fault = False
+                    if self.blueprint['exercise_name'].lower() == 'pushup':
+                        # High-accuracy pushup posture logic:
+                        # y increases downwards in MediaPipe.
+                        # Hips are higher than shoulders if b[1] < a[1] (which indicates piked hips).
+                        # A threshold of 0.05 is applied to accommodate camera perspective shifts.
+                        is_piked = b[1] < a[1] - 0.05
+                        
+                        if fault['name'] == 'Piked_Hips':
+                            # Piked hips triggers only if the hips are actually elevated higher than shoulders
+                            is_fault = is_piked
+                        elif fault['name'] == 'Sagging_Back':
+                            # Sagging back triggers only if hips are below shoulders and sagging exceeds the max angle (20)
+                            is_fault = (not is_piked) and (s_angle > fault['max_angle'])
+                    else:
+                        if 'min_angle' in fault and s_angle < fault['min_angle']:
+                            is_fault = True
+                        if 'max_angle' in fault and s_angle > fault['max_angle']:
+                            is_fault = True
                     
                 if is_fault:
                     active_fault = fault['feedback_message']
