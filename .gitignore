@@ -19,6 +19,7 @@ env/
 *traceback.txt
 traceback_solutions.txt
 session_export.json
+session_export_processed.json
 
 # IDE / Editor Configs
 .vscode/
@@ -29,3 +30,17 @@ Thumbs.db
 db.db
 Desktop.ini
 .DS_Store
+
+# Video files (large binary — store separately)
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Trained ML model binaries (regenerate with setup_model.py)
+models/*.pkl
+
+# Frontend — Node dependencies & build output
+node_modules/
+dist/
+.env.local
