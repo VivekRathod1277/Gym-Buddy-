@@ -3,3 +3,6 @@ mediapipe
 numpy
 pyttsx3
 scikit-learn
+openai
+python-dotenv
+Pillow
