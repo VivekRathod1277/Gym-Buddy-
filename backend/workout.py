@@ -1,0 +1,541 @@
+import os
+import uuid
+import cv2
+import numpy as np
+import base64
+import threading
+from typing import List, Dict
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form, status, WebSocket, WebSocketDisconnect
+import asyncio
+from fastapi.responses import FileResponse
+import mediapipe as mp
+
+from backend.schemas import (
+    DetectExerciseRequest, DetectExerciseResponse,
+    AnalyzeFrameRequest, AnalyzeFrameResponse,
+    TaskStatusResponse, TokenData
+)
+from backend.dependencies import get_current_user
+from core.ai_advisor import AIAdvisor
+from core.physics_engine import PhysicsEngine
+from core.ml_model import ExerciseClassifier
+
+router = APIRouter(prefix="/api/workout", tags=["workout"])
+
+# Initialize advisor
+advisor = AIAdvisor()
+
+# Directory configuration inside the workspace
+TEMP_DIR = "temp_uploads"
+PROCESSED_DIR = "processed_videos"
+
+os.makedirs(TEMP_DIR, exist_ok=True)
+os.makedirs(PROCESSED_DIR, exist_ok=True)
+
+# In-memory task tracker
+tasks: Dict[str, dict] = {}
+
+def decode_base64_frame(b64_str: str) -> np.ndarray:
+    """Helper to convert base64 image string to OpenCV BGR frame."""
+    try:
+        if "," in b64_str:
+            b64_str = b64_str.split(",")[1]
+        img_data = base64.b64decode(b64_str)
+        nparr = np.frombuffer(img_data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if frame is None:
+            raise ValueError("Decoded image is None")
+        return frame
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid base64 frame encoding: {e}"
+        )
+
+# ─────────────────────────────────────────────
+#  Exercise Detection and Frame Coaching
+# ─────────────────────────────────────────────
+
+@router.post("/detect-exercise", response_model=DetectExerciseResponse)
+def detect_exercise_endpoint(payload: DetectExerciseRequest, _: TokenData = Depends(get_current_user)):
+    """Analyze a single frame to auto-detect the exercise type using NVIDIA NIM AI."""
+    frame = decode_base64_frame(payload.frame_b64)
+    try:
+        detected = advisor.detect_exercise(frame)
+        return DetectExerciseResponse(exercise=detected)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Exercise detection failed: {e}"
+        )
+
+@router.post("/analyze-frame", response_model=AnalyzeFrameResponse)
+def analyze_frame_endpoint(payload: AnalyzeFrameRequest, _: TokenData = Depends(get_current_user)):
+    """
+    Coaches the user's form on a single frame.
+    Blocks internally using an event until the NVIDIA NIM callback returns.
+    """
+    frame = decode_base64_frame(payload.frame_b64)
+    event = threading.Event()
+    result = []
+
+    def callback(text: str):
+        result.append(text)
+        event.set()
+
+    try:
+        advisor.analyze_frame(frame, payload.exercise_name, callback)
+        
+        # Wait up to 10 seconds for NVIDIA response
+        success = event.wait(timeout=10.0)
+        if not success or not result:
+            return AnalyzeFrameResponse(feedback="Keep your form tight and focus on controlled movement.")
+        
+        return AnalyzeFrameResponse(feedback=result[0])
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Frame analysis failed: {e}"
+        )
+
+# ─────────────────────────────────────────────
+#  List Available Exercises
+# ─────────────────────────────────────────────
+
+@router.get("/exercises", response_model=List[str])
+def list_exercises(_: TokenData = Depends(get_current_user)):
+    """List all exercises available in the system config blueprints."""
+    blueprint_dir = os.path.join("config", "exercises")
+    if not os.path.exists(blueprint_dir):
+        return ["pushup", "pullup", "squat", "bicep_curl"]
+    
+    files = os.listdir(blueprint_dir)
+    exercises = [f.replace(".json", "") for f in files if f.endswith(".json")]
+    return exercises
+
+# ─────────────────────────────────────────────
+#  Async Video Processing Pipeline
+# ─────────────────────────────────────────────
+
+def process_video_task(
+    task_id: str,
+    input_path: str,
+    output_path: str,
+    exercise_file: str,
+    user_id: int
+):
+    """Background worker task to process video and compile stats."""
+    tasks[task_id]["status"] = "processing"
+    tasks[task_id]["progress"] = 0.0
+
+    cap = cv2.VideoCapture(input_path)
+    if not cap.isOpened():
+        tasks[task_id]["status"] = "failed"
+        tasks[task_id]["error"] = "Could not open uploaded video file"
+        return
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    if total_frames <= 0:
+        total_frames = 1  # prevent division by zero
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    if not out.isOpened():
+        tasks[task_id]["status"] = "failed"
+        tasks[task_id]["error"] = "Could not initialize video writer"
+        cap.release()
+        return
+
+    # Handle auto exercise detection from first frame
+    if exercise_file in ["auto", "auto.json"]:
+        ret, frame = cap.read()
+        if ret:
+            detected = advisor.detect_exercise(frame)
+            exercise_file = f"{detected}.json"
+        else:
+            exercise_file = "pushup.json"
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+    exercise_name = exercise_file.replace(".json", "")
+    blueprint_path = os.path.join("config", "exercises", exercise_file)
+    
+    if not os.path.exists(blueprint_path):
+        tasks[task_id]["status"] = "failed"
+        tasks[task_id]["error"] = f"Exercise blueprint '{exercise_file}' not found."
+        cap.release()
+        out.release()
+        return
+
+    engine = PhysicsEngine(blueprint_path)
+    classifier = ExerciseClassifier()
+
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    mp_drawing = mp.solutions.drawing_utils
+
+    processed_count = 0
+    last_rep_count = 0
+    tip_text = "Engage your core to maintain a flat back and a straight line."
+
+    try:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            processed_count += 1
+            # Update progress ratio
+            tasks[task_id]["progress"] = round((processed_count / total_frames) * 100, 2)
+
+            image = frame.copy()
+            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb_image.flags.writeable = False
+            results = pose.process(rgb_image)
+            rgb_image.flags.writeable = True
+
+            if results.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                    mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
+                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
+                )
+
+                # Run custom posture classification prediction
+                _ = classifier.predict(results.pose_landmarks)
+
+                # Biomechanical analysis
+                eval_data = engine.evaluate_frame(results.pose_landmarks.landmark)
+                if eval_data:
+                    display_reps = eval_data['reps']
+                    display_fault = eval_data['active_fault']
+                    angle = eval_data['angle']
+
+                    if display_reps > last_rep_count:
+                        last_rep_count = display_reps
+
+                    # Draw Overlay HUD
+                    h_img, w_img, _ = image.shape
+                    overlay = image.copy()
+                    cv2.rectangle(overlay, (0, 0), (w_img, 100), (20, 20, 20), -1)
+                    image = cv2.addWeighted(overlay, 0.7, image, 0.3, 0)
+                    cv2.line(image, (0, 100), (w_img, 100), (0, 255, 255), 2)
+
+                    cv2.putText(image, "ACTIVE SESSION", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(image, exercise_name.upper(), (30, 80), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+                    cv2.putText(image, "REPS", (w_img//2 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(image, f"{display_reps:02d}", (w_img//2 - 60, 85), cv2.FONT_HERSHEY_DUPLEX, 1.8, (0, 255, 0), 3, cv2.LINE_AA)
+                    cv2.putText(image, "JOINT ANGLE", (w_img - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(image, f"{int(angle)}deg", (w_img - 180, 80), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+
+                    # Contextual coaching tips
+                    if display_reps >= 1:
+                        tip_text = "Excellent depth! Focus on pushing through the chest."
+                    if display_fault:
+                        if "flat" in display_fault.lower() or "sagging" in display_fault.lower():
+                            tip_text = "Engage your core and squeeze your glutes to correct sagging hips."
+                        elif "head" in display_fault.lower() or "neck" in display_fault.lower():
+                            tip_text = "Look slightly ahead on the floor, not down, to keep your neck safe."
+                        elif "piked" in display_fault.lower():
+                            tip_text = "Lower your hips slightly to align shoulders, hips, and ankles."
+
+                    cv2.rectangle(image, (20, 120), (w_img - 20, 180), (100, 50, 0), -1)
+                    cv2.putText(image, "GEMINI AI ADVISOR:", (35, 145), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+                    cv2.putText(image, tip_text, (35, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+
+                    if display_fault:
+                        warning_overlay = image.copy()
+                        cv2.rectangle(warning_overlay, (0, h_img - 70), (w_img, h_img), (0, 0, 200), -1)
+                        image = cv2.addWeighted(warning_overlay, 0.8, image, 0.2, 0)
+                        cv2.putText(image, "CORRECTION REQUIRED", (w_img//2 - 130, h_img - 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 255), 1, cv2.LINE_AA)
+                        text_str = f"> {display_fault.upper()} <"
+                        text_size = cv2.getTextSize(text_str, cv2.FONT_HERSHEY_DUPLEX, 0.8, 2)[0]
+                        text_x = (w_img - text_size[0]) // 2
+                        cv2.putText(image, text_str, (text_x, h_img - 15), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+
+            out.write(image)
+
+        cap.release()
+        out.release()
+
+        # Compile session and save to DB
+        session_data = engine.get_session_data()
+        from core.database import save_session
+        save_session(
+            user_id=user_id,
+            exercise_name=session_data["exercise"],
+            total_reps=session_data["total_reps"],
+            faults=session_data["faults_recorded"],
+            ai_suggestion=tip_text
+        )
+
+        # Update final task status
+        tasks[task_id]["status"] = "completed"
+        tasks[task_id]["progress"] = 100.0
+        tasks[task_id]["result"] = {
+            "exercise": session_data["exercise"],
+            "total_reps": session_data["total_reps"],
+            "faults_recorded": session_data["faults_recorded"],
+            "processed_video_url": f"/api/workout/processed-videos/{os.path.basename(output_path)}",
+            "ai_suggestion": tip_text
+        }
+
+        # Cleanup input file
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+    except Exception as exc:
+        tasks[task_id]["status"] = "failed"
+        tasks[task_id]["error"] = str(exc)
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+
+@router.post("/process-video", response_model=TaskStatusResponse)
+def upload_video_endpoint(
+    background_tasks: BackgroundTasks,
+    exercise: str = Form("auto"),  # auto or squat, pushup, pullup, bicep_curl
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """
+    Accepts video upload, registers task, and runs processing pipeline in the background.
+    """
+    task_id = str(uuid.uuid4())
+    input_filename = f"{task_id}_{file.filename}"
+    input_path = os.path.join(TEMP_DIR, input_filename)
+    
+    # Save output to .mp4
+    output_filename = f"processed_{task_id}.mp4"
+    output_path = os.path.join(PROCESSED_DIR, output_filename)
+
+    # Save uploaded file
+    try:
+        with open(input_path, "wb") as buffer:
+            buffer.write(file.file.read())
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save uploaded file: {e}"
+        )
+
+    # Convert exercise name to file name
+    if exercise == "auto":
+        exercise_file = "auto"
+    else:
+        exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
+
+    tasks[task_id] = {
+        "task_id": task_id,
+        "status": "pending",
+        "progress": 0.0,
+        "result": None,
+        "error": None,
+        "input_path": input_path,
+        "output_path": output_path,
+        "exercise_file": exercise_file,
+        "user_id": current_user.user_id
+    }
+
+    # We do NOT start a background task here anymore.
+    # The processing will be driven by the WebSocket connection to stream the frames live.
+    return TaskStatusResponse(
+        task_id=task_id,
+        status="pending",
+        progress=0.0,
+        result=None,
+        error=None
+    )
+
+@router.websocket("/ws/stream-video/{task_id}")
+async def stream_video_ws(websocket: WebSocket, task_id: str):
+    await websocket.accept()
+    if task_id not in tasks:
+        await websocket.send_json({"status": "failed", "error": "Task not found"})
+        await websocket.close()
+        return
+
+    task_info = tasks[task_id]
+    input_path = task_info["input_path"]
+    output_path = task_info["output_path"]
+    exercise_file = task_info["exercise_file"]
+    user_id = task_info["user_id"]
+
+    tasks[task_id]["status"] = "processing"
+
+    cap = cv2.VideoCapture(input_path)
+    if not cap.isOpened():
+        tasks[task_id]["status"] = "failed"
+        await websocket.send_json({"status": "failed", "error": "Could not open uploaded video file"})
+        await websocket.close()
+        return
+
+    # Handle auto exercise detection from first frame
+    if exercise_file in ["auto", "auto.json"]:
+        ret, frame = cap.read()
+        if ret:
+            detected = advisor.detect_exercise(frame)
+            exercise_file = f"{detected}.json"
+        else:
+            exercise_file = "pushup.json"
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+    exercise_name = exercise_file.replace(".json", "")
+    blueprint_path = os.path.join("config", "exercises", exercise_file)
+    
+    if not os.path.exists(blueprint_path):
+        tasks[task_id]["status"] = "failed"
+        await websocket.send_json({"status": "failed", "error": f"Exercise blueprint '{exercise_file}' not found."})
+        cap.release()
+        await websocket.close()
+        return
+
+    engine = PhysicsEngine(blueprint_path)
+    classifier = ExerciseClassifier()
+
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    mp_drawing = mp.solutions.drawing_utils
+
+    tip_text = "Engage your core to maintain a flat back and a straight line."
+    last_rep_count = 0
+    display_reps = 0
+    display_fault = None
+    angle = 0
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    frame_delay = 1.0 / fps # target delay to stream at 1x speed
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    try:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            image = frame.copy()
+            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb_image.flags.writeable = False
+            results = pose.process(rgb_image)
+            rgb_image.flags.writeable = True
+
+            if results.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                    mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
+                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
+                )
+
+                _ = classifier.predict(results.pose_landmarks)
+                eval_data = engine.evaluate_frame(results.pose_landmarks.landmark)
+                if eval_data:
+                    display_reps = eval_data['reps']
+                    display_fault = eval_data['active_fault']
+                    angle = eval_data['angle']
+
+                    if display_reps > last_rep_count:
+                        last_rep_count = display_reps
+
+                    # Contextual coaching tips
+                    if display_reps >= 1:
+                        tip_text = "Excellent depth! Focus on pushing through the chest."
+                    if display_fault:
+                        if "flat" in display_fault.lower() or "sagging" in display_fault.lower():
+                            tip_text = "Engage your core and squeeze your glutes to correct sagging hips."
+                        elif "head" in display_fault.lower() or "neck" in display_fault.lower():
+                            tip_text = "Look slightly ahead on the floor, not down, to keep your neck safe."
+                        elif "piked" in display_fault.lower():
+                            tip_text = "Lower your hips slightly to align shoulders, hips, and ankles."
+
+            out.write(image)
+
+            # Send data over WebSocket
+            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            b64_img = base64.b64encode(buffer).decode('utf-8')
+
+            await websocket.send_json({
+                "status": "processing",
+                "frame": b64_img,
+                "reps": display_reps,
+                "angle": int(angle) if angle else 0,
+                "fault": display_fault,
+                "ai_tip": tip_text,
+                "exercise": exercise_name
+            })
+
+            await asyncio.sleep(frame_delay * 0.5) # slightly faster than realtime to feel snappy but not dump instantly
+
+        cap.release()
+        out.release()
+
+        session_data = engine.get_session_data()
+        from core.database import save_session
+        save_session(
+            user_id=user_id,
+            exercise_name=session_data["exercise"],
+            total_reps=session_data["total_reps"],
+            faults=session_data["faults_recorded"],
+            ai_suggestion=tip_text
+        )
+
+        final_result = {
+            "exercise": session_data["exercise"],
+            "total_reps": session_data["total_reps"],
+            "faults_recorded": session_data["faults_recorded"],
+            "processed_video_url": f"/api/workout/processed-videos/{os.path.basename(output_path)}",
+            "ai_suggestion": tip_text
+        }
+
+        tasks[task_id]["status"] = "completed"
+        tasks[task_id]["result"] = final_result
+
+        await websocket.send_json({
+            "status": "completed",
+            "result": final_result
+        })
+
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        await websocket.close()
+
+    except WebSocketDisconnect:
+        print(f"Client disconnected for task {task_id}")
+        cap.release()
+        out.release()
+    except Exception as exc:
+        print(f"WS error: {exc}")
+        tasks[task_id]["status"] = "failed"
+        await websocket.send_json({"status": "failed", "error": str(exc)})
+        await websocket.close()
+
+
+
+@router.get("/tasks/{task_id}", response_model=TaskStatusResponse)
+def get_task_status(task_id: str, _: TokenData = Depends(get_current_user)):
+    """Fetch status and progress details of a video processing task."""
+    if task_id not in tasks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task ID not found"
+        )
+    return TaskStatusResponse(**tasks[task_id])
+
+
+@router.get("/processed-videos/{filename}")
+def download_processed_video(filename: str):
+    """Download the final analyzed workout video file."""
+    file_path = os.path.join(PROCESSED_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processed video file not found"
+        )
+    return FileResponse(file_path, media_type="video/mp4", filename=filename)

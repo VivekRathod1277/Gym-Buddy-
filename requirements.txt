@@ -1,8 +1,12 @@
 opencv-python
-mediapipe
+mediapipe==0.10.14
 numpy
 pyttsx3
 scikit-learn
 openai
 python-dotenv
 Pillow
+fastapi
+uvicorn
+pyjwt
+python-multipart

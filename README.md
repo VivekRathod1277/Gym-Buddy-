@@ -53,7 +53,7 @@ py -3.9 setup_model.py
 
 ### 3. Launch the web dashboard
 ```bash
-py -3.9 -m streamlit run app.py
+
 ```
 
 ### 4. Or run from command line

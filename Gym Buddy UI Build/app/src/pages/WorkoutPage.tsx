@@ -4,6 +4,7 @@ import { useSessions } from '@/hooks/useSessions';
 import { useVoice } from '@/hooks/useVoice';
 import { useToast } from '@/hooks/useToast';
 import { EXERCISE_CONFIGS, EXERCISE_COLORS } from '@/types';
+import api from '@/lib/api';
 import type { AnalysisStatus, InputMode, ExerciseType } from '@/types';
 import Sidebar from '@/components/Sidebar';
 import SessionSummaryModal from '@/components/SessionSummaryModal';
@@ -22,6 +23,8 @@ export default function WorkoutPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null);
+  const [liveFrame, setLiveFrame] = useState<string | null>(null);
   const [skeletonJoints] = useState(() => generateSkeletonJoints());
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -68,7 +71,7 @@ export default function WorkoutPage() {
     }, 3000);
   }, [speak]);
 
-  const startAnalysis = useCallback(() => {
+  const startAnalysis = useCallback(async () => {
     if (inputMode === 'upload' && !file) return;
 
     setIsInitializing(true);
@@ -81,80 +84,106 @@ export default function WorkoutPage() {
     setDetectedFaults([]);
     setShowSummary(false);
     setElapsedTime(0);
+    setProcessedVideoUrl(null);
+    setLiveFrame(null);
 
-    speak('Initializing analysis. Please begin your exercise.');
+    speak('Initializing analysis. Uploading video...');
 
-    // Simulate initialization delay
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const config = EXERCISE_CONFIGS[exerciseType];
+      const exerciseName = config.name === 'Auto Detect' ? 'Push-up' : config.name;
+      // We also send the exercise name if needed, though backend currently auto-detects or we can add it if supported.
+      
+      const uploadResponse = await api.post('/workout/process-video', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const taskId = uploadResponse.data.task_id;
+      
       setIsInitializing(false);
       setStatus('active');
       statusStartTimeRef.current = Date.now();
-
-      const config = EXERCISE_CONFIGS[exerciseType];
-      const exerciseName = config.name === 'Auto Detect' ? 'Push-up' : config.name;
-      speak(`Detected ${exerciseName.toLowerCase()}. Starting session.`);
-
-      // Simulate rep counting
-      let currentReps = 0;
-      const targetReps = 10 + Math.floor(Math.random() * 6); // 10-15 reps
-
-      intervalRef.current = setInterval(() => {
-        setElapsedTime(prev => prev + 1);
-
-        // Update angle (simulate joint angle fluctuation)
-        setAngle(90 + Math.floor(Math.random() * 70));
-
-        // Random rep increment (every ~1.5s)
-        if (Math.random() < 0.08) {
-          currentReps++;
-          setReps(currentReps);
-          speak(`Rep ${currentReps}`);
-
-          // Show AI tip after first rep
-          if (currentReps === 1) {
-            const tips = config.aiTips;
-            const randomTip = tips[Math.floor(Math.random() * tips.length)];
-            setAiTip(randomTip);
-            setTimeout(() => speak(randomTip), 500);
+      speak(`Processing video...`);
+      
+      // Open WebSocket connection to stream live processed frames
+      const ws = new WebSocket(`ws://127.0.0.1:8000/api/workout/ws/stream-video/${taskId}`);
+      
+      // Timer for elapsed time
+      intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.status === 'processing') {
+          if (data.frame) {
+            setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
           }
-
-          // Random fault detection (20% chance per rep)
-          if (Math.random() < 0.2) {
-            const faults = config.faults;
-            const randomFault = faults[Math.floor(Math.random() * faults.length)];
-            triggerFault(randomFault);
+          if (data.reps !== undefined) {
+             setReps(prev => {
+                if (data.reps > prev) speak(`Rep ${data.reps}`);
+                return data.reps;
+             });
           }
-
-          // End session
-          if (currentReps >= targetReps) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            setStatus('done');
-            speak('Session complete. Great work!');
-
-            // Save session
-            const sessionData = {
-              userId: '1',
-              exerciseName: exerciseName,
-              totalReps: currentReps,
-              faults: detectedFaults.length > 0
-                ? detectedFaults
-                : (currentFault ? [currentFault] : []),
-              aiSuggestion: exerciseConfig.aiTips[Math.floor(Math.random() * exerciseConfig.aiTips.length)],
-              timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
-              duration: Math.floor((Date.now() - statusStartTimeRef.current) / 1000),
-            };
-            addSession(sessionData);
-            addToast(`Session saved! Total Reps: ${currentReps}`, 'success');
-
-            // Show summary after 1.5s
-            setTimeout(() => {
-              setShowSummary(true);
-            }, 1500);
+          if (data.angle !== undefined) setAngle(data.angle);
+          if (data.ai_tip) setAiTip(data.ai_tip);
+          if (data.fault) {
+             setCurrentFault(prev => {
+                 if (prev !== data.fault) triggerFault(data.fault);
+                 return data.fault;
+             });
           }
+        } else if (data.status === 'completed') {
+          ws.close();
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          
+          const result = data.result || {};
+          setReps(result.total_reps || 0);
+          setDetectedFaults(result.faults_recorded || []);
+          setAiTip(result.ai_suggestion || 'Great job!');
+          if (result.processed_video_url) {
+            setProcessedVideoUrl(result.processed_video_url);
+          }
+          
+          setStatus('done');
+          speak('Session complete. Great work!');
+          
+          const sessionData = {
+            exerciseName: result.exercise || exerciseName,
+            totalReps: result.total_reps || 0,
+            faults: result.faults_recorded || [],
+            aiSuggestion: result.ai_suggestion || 'Great job!',
+            timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            duration: Math.floor((Date.now() - statusStartTimeRef.current) / 1000),
+          };
+          
+          addSession(sessionData);
+          addToast(`Session saved! Total Reps: ${result.total_reps || 0}`, 'success');
+          
+          setTimeout(() => setShowSummary(true), 1500);
+        } else if (data.status === 'failed') {
+          ws.close();
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          setStatus('idle');
+          addToast('Video processing failed: ' + data.error, 'error');
         }
-      }, 100);
-    }, 2000);
-  }, [inputMode, file, exerciseType, triggerFault, speak, addSession, addToast, detectedFaults, currentFault]);
+      };
+      
+      ws.onerror = () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setStatus('idle');
+        addToast('WebSocket connection error.', 'error');
+      };
+
+    } catch (err) {
+      console.error('Upload failed', err);
+      setIsInitializing(false);
+      setStatus('idle');
+      addToast('Failed to upload video.', 'error');
+    }
+  }, [inputMode, file, exerciseType, speak, addSession, addToast]);
 
   const handleNewSession = useCallback(() => {
     setStatus('idle');
@@ -168,6 +197,8 @@ export default function WorkoutPage() {
     setFile(null);
     setIsInitializing(false);
     setElapsedTime(0);
+    setProcessedVideoUrl(null);
+    setLiveFrame(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (faultTimeoutRef.current) clearTimeout(faultTimeoutRef.current);
   }, []);
@@ -250,29 +281,28 @@ export default function WorkoutPage() {
 
               {/* File Uploader */}
               {inputMode === 'upload' && (
-                <div className="mb-6">
+                <div className="mb-6 relative">
                   <label className="block font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mb-2">
                     VIDEO FILE
                   </label>
-                  <div
-                    onClick={() => {
-                      if (!isActive && !isInitializing) {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.mp4,.mov,.avi,.mkv';
-                        input.onchange = (e) => {
-                          const f = (e.target as HTMLInputElement).files?.[0];
-                          if (f) setFile(f);
-                        };
-                        input.click();
-                      }
+                  <input
+                    type="file"
+                    accept=".mp4,.mov,.avi,.mkv"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setFile(f);
                     }}
-                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
+                    disabled={isActive || isInitializing}
+                    title="Upload video"
+                  />
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 relative ${
                       file
                         ? 'border-[#00ff88]/50 bg-[rgba(0,255,136,0.03)]'
                         : 'border-[rgba(0,212,255,0.3)] bg-[rgba(10,10,15,0.3)] hover:border-[rgba(0,212,255,0.6)] hover:bg-[rgba(0,212,255,0.03)]'
                     }`}
-                    style={{ pointerEvents: isActive || isInitializing ? 'none' : 'auto', opacity: isActive || isInitializing ? 0.5 : 1 }}
+                    style={{ opacity: isActive || isInitializing ? 0.5 : 1 }}
                   >
                     {file ? (
                       <div className="flex items-center justify-center gap-2">
@@ -375,7 +405,7 @@ export default function WorkoutPage() {
                 )}
 
                 {/* Active State - Video Feed with Skeleton */}
-                {(isActive || status === 'done') && (
+                {(isActive || status === 'done') && !processedVideoUrl && (
                   <div className="absolute inset-0">
                     {/* Mock video background - person silhouette */}
                     <div
@@ -441,7 +471,27 @@ export default function WorkoutPage() {
                         }}
                       />
                     )}
+
+                    {/* Live Frame Overlay (Websocket MJPEG) */}
+                    {liveFrame && status === 'active' && (
+                      <img
+                        src={liveFrame}
+                        alt="Live Processed Frame"
+                        className="absolute inset-0 w-full h-full object-contain bg-black z-10"
+                      />
+                    )}
                   </div>
+                )}
+
+                {/* Done State - Real Processed Video */}
+                {status === 'done' && processedVideoUrl && (
+                  <video
+                    src={`http://127.0.0.1:8000${processedVideoUrl}`}
+                    className="absolute inset-0 w-full h-full object-contain bg-black z-30"
+                    autoPlay
+                    controls
+                    loop
+                  />
                 )}
 
                 {/* Fault Alert Overlay */}
