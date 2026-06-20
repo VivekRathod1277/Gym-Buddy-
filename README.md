@@ -52,13 +52,29 @@ py -3.9 setup_model.py
 ```
 
 ### 3. Launch the web dashboard
-```bash
+You will need two separate terminal windows.
 
+**Terminal 1 (Backend API):**
+```bash
+# Start the FastAPI server
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+**Terminal 2 (Frontend React App):**
+```bash
+# Navigate to the frontend directory
+cd "Gym Buddy UI Build/app"
+
+# Install Node dependencies (only needed the first time)
+npm install
+
+# Start the Vite development server
+npm run dev
 ```
 
 ### 4. Or run from command line
 ```bash
-py -3.9 main.py "pushup.mp4"
+python main.py "pushup.mp4"
 ```
 
 ## Model Details
