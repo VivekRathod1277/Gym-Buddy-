@@ -366,23 +366,30 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
 
     tasks[task_id]["status"] = "processing"
 
+    print(f"[WS] Streaming started for task {task_id}")
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
+        print("[WS] cap.isOpened() failed!")
         tasks[task_id]["status"] = "failed"
         await websocket.send_json({"status": "failed", "error": "Could not open uploaded video file"})
         await websocket.close()
         return
 
+    print(f"[WS] Handling auto detect for {exercise_file}")
     # Handle auto exercise detection from first frame
     if exercise_file in ["auto", "auto.json"]:
         ret, frame = cap.read()
         if ret:
+            print("[WS] Read first frame, detecting exercise...")
             detected = advisor.detect_exercise(frame)
+            print(f"[WS] Detected exercise: {detected}")
             exercise_file = f"{detected}.json"
         else:
+            print("[WS] Failed to read first frame for auto detect")
             exercise_file = "pushup.json"
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
+        
+    print(f"[WS] Loading blueprint for {exercise_file}")
     exercise_name = exercise_file.replace(".json", "")
     blueprint_path = os.path.join("config", "exercises", exercise_file)
     
@@ -396,16 +403,6 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
     engine = PhysicsEngine(blueprint_path)
     classifier = ExerciseClassifier()
 
-    mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    mp_drawing = mp.solutions.drawing_utils
-
-    tip_text = "Engage your core to maintain a flat back and a straight line."
-    last_rep_count = 0
-    display_reps = 0
-    display_fault = None
-    angle = 0
-
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     frame_delay = 1.0 / fps # target delay to stream at 1x speed
 
@@ -415,6 +412,18 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     try:
+        print("[WS] Initializing mediapipe...")
+        mp_pose = mp.solutions.pose
+        pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        mp_drawing = mp.solutions.drawing_utils
+        print("[WS] Mediapipe initialized")
+
+        tip_text = "Engage your core to maintain a flat back and a straight line."
+        last_rep_count = 0
+        display_reps = 0
+        display_fault = None
+        angle = 0
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:

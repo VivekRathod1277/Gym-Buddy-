@@ -176,6 +176,17 @@ export default function WorkoutPage() {
         setStatus('idle');
         addToast('WebSocket connection error.', 'error');
       };
+      
+      ws.onclose = () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setStatus((prevStatus) => {
+          if (prevStatus === 'active' || prevStatus === 'scanning') {
+            addToast('WebSocket connection closed unexpectedly.', 'error');
+            return 'idle';
+          }
+          return prevStatus;
+        });
+      };
 
     } catch (err) {
       console.error('Upload failed', err);
