@@ -102,6 +102,7 @@ class AIAdvisor:
                 max_tokens=128,
                 extra_body={"chat_template_kwargs": {"thinking": False}},
                 stream=False,
+                timeout=5.0,
             )
 
             suggestion = response.choices[0].message.content.strip()
@@ -139,6 +140,7 @@ class AIAdvisor:
                 max_tokens=10,
                 extra_body={"chat_template_kwargs": {"thinking": False}},
                 stream=False,
+                timeout=5.0,
             )
 
             exercise = response.choices[0].message.content.strip().lower()
