@@ -63,7 +63,7 @@ export default function WorkoutPage() {
   const triggerFault = useCallback((faultName: string) => {
     setCurrentFault(faultName);
     setDetectedFaults(prev => [...prev, faultName]);
-    speak(faultName.replace(/_/g, ' ') + ' detected. Please correct your form.');
+    // Speak the AI tip instead of hardcoded fault, handled in WebSocket onmessage
 
     if (faultTimeoutRef.current) clearTimeout(faultTimeoutRef.current);
     faultTimeoutRef.current = setTimeout(() => {
@@ -128,7 +128,12 @@ export default function WorkoutPage() {
              });
           }
           if (data.angle !== undefined) setAngle(data.angle);
-          if (data.ai_tip) setAiTip(data.ai_tip);
+          if (data.ai_tip) {
+             setAiTip(prev => {
+                 if (prev !== data.ai_tip) speak(data.ai_tip);
+                 return data.ai_tip;
+             });
+          }
           if (data.fault) {
              setCurrentFault(prev => {
                  if (prev !== data.fault) triggerFault(data.fault);

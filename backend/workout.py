@@ -179,7 +179,9 @@ def process_video_task(
 
     processed_count = 0
     last_rep_count = 0
-    tip_text = "Engage your core to maintain a flat back and a straight line."
+    tip_text = "Get into position, analysis will begin shortly."
+    last_fault = None
+    ai_last_trigger = 0
 
     try:
         while cap.isOpened():
@@ -231,16 +233,24 @@ def process_video_task(
                     cv2.putText(image, "JOINT ANGLE", (w_img - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
                     cv2.putText(image, f"{int(angle)}deg", (w_img - 180, 80), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
 
-                    # Contextual coaching tips
-                    if display_reps >= 1:
-                        tip_text = "Excellent depth! Focus on pushing through the chest."
-                    if display_fault:
-                        if "flat" in display_fault.lower() or "sagging" in display_fault.lower():
-                            tip_text = "Engage your core and squeeze your glutes to correct sagging hips."
-                        elif "head" in display_fault.lower() or "neck" in display_fault.lower():
-                            tip_text = "Look slightly ahead on the floor, not down, to keep your neck safe."
-                        elif "piked" in display_fault.lower():
-                            tip_text = "Lower your hips slightly to align shoulders, hips, and ankles."
+                    # Contextual coaching tips with AI Advisor
+                    should_trigger = False
+                    if processed_count > 60 and not advisor.is_analyzing:
+                        if display_fault and display_fault != last_fault:
+                            should_trigger = True
+                            last_fault = display_fault
+                        elif processed_count - ai_last_trigger > fps * 4:  # every 4 seconds of video
+                            should_trigger = True
+                            
+                    if should_trigger:
+                        ai_last_trigger = processed_count
+                        def on_ai_received(text):
+                            nonlocal tip_text
+                            tip_text = text
+                        # Make sure to copy the frame if it's being drawn on, but here 'frame' is the raw frame
+                        advisor.analyze_frame(frame, exercise_name, on_ai_received)
+                    elif not display_fault:
+                        last_fault = None
 
                     cv2.rectangle(image, (20, 120), (w_img - 20, 180), (100, 50, 0), -1)
                     cv2.putText(image, "GEMINI AI ADVISOR:", (35, 145), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
@@ -366,30 +376,30 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
 
     tasks[task_id]["status"] = "processing"
 
-    print(f"[WS] Streaming started for task {task_id}")
+    print(f"[WS] Streaming started for task {task_id}", flush=True)
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
-        print("[WS] cap.isOpened() failed!")
+        print("[WS] cap.isOpened() failed!", flush=True)
         tasks[task_id]["status"] = "failed"
         await websocket.send_json({"status": "failed", "error": "Could not open uploaded video file"})
         await websocket.close()
         return
 
-    print(f"[WS] Handling auto detect for {exercise_file}")
+    print(f"[WS] Handling auto detect for {exercise_file}", flush=True)
     # Handle auto exercise detection from first frame
     if exercise_file in ["auto", "auto.json"]:
         ret, frame = cap.read()
         if ret:
-            print("[WS] Read first frame, detecting exercise...")
-            detected = advisor.detect_exercise(frame)
-            print(f"[WS] Detected exercise: {detected}")
+            print("[WS] Read first frame, detecting exercise...", flush=True)
+            detected = await asyncio.to_thread(advisor.detect_exercise, frame)
+            print(f"[WS] Detected exercise: {detected}", flush=True)
             exercise_file = f"{detected}.json"
         else:
-            print("[WS] Failed to read first frame for auto detect")
+            print("[WS] Failed to read first frame for auto detect", flush=True)
             exercise_file = "pushup.json"
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         
-    print(f"[WS] Loading blueprint for {exercise_file}")
+    print(f"[WS] Loading blueprint for {exercise_file}", flush=True)
     exercise_name = exercise_file.replace(".json", "")
     blueprint_path = os.path.join("config", "exercises", exercise_file)
     
@@ -412,22 +422,27 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     try:
-        print("[WS] Initializing mediapipe...")
+        print("[WS] Initializing mediapipe...", flush=True)
         mp_pose = mp.solutions.pose
         pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
         mp_drawing = mp.solutions.drawing_utils
-        print("[WS] Mediapipe initialized")
+        print("[WS] Mediapipe initialized", flush=True)
 
-        tip_text = "Engage your core to maintain a flat back and a straight line."
+        tip_text = "Get into position, analysis will begin shortly."
         last_rep_count = 0
         display_reps = 0
         display_fault = None
+        last_fault = None
         angle = 0
+        processed_count = 0
+        ai_last_trigger = 0
 
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
+                
+            processed_count += 1
 
             image = frame.copy()
             rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -452,16 +467,23 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
                     if display_reps > last_rep_count:
                         last_rep_count = display_reps
 
-                    # Contextual coaching tips
-                    if display_reps >= 1:
-                        tip_text = "Excellent depth! Focus on pushing through the chest."
-                    if display_fault:
-                        if "flat" in display_fault.lower() or "sagging" in display_fault.lower():
-                            tip_text = "Engage your core and squeeze your glutes to correct sagging hips."
-                        elif "head" in display_fault.lower() or "neck" in display_fault.lower():
-                            tip_text = "Look slightly ahead on the floor, not down, to keep your neck safe."
-                        elif "piked" in display_fault.lower():
-                            tip_text = "Lower your hips slightly to align shoulders, hips, and ankles."
+                    # Contextual coaching tips with AI Advisor
+                    should_trigger = False
+                    if processed_count > 60 and not advisor.is_analyzing:
+                        if display_fault and display_fault != last_fault:
+                            should_trigger = True
+                            last_fault = display_fault
+                        elif processed_count - ai_last_trigger > fps * 4:  # every 4 seconds of video
+                            should_trigger = True
+                            
+                    if should_trigger:
+                        ai_last_trigger = processed_count
+                        def on_ai_received(text):
+                            nonlocal tip_text
+                            tip_text = text
+                        advisor.analyze_frame(frame, exercise_name, on_ai_received)
+                    elif not display_fault:
+                        last_fault = None
 
             out.write(image)
 
@@ -479,7 +501,7 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
                 "exercise": exercise_name
             })
 
-            await asyncio.sleep(frame_delay * 0.5) # slightly faster than realtime to feel snappy but not dump instantly
+            await asyncio.sleep(0.001) # yield to event loop so we process frames fast but don't block socket
 
         cap.release()
         out.release()

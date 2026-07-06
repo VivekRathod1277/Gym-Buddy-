@@ -87,11 +87,12 @@ class AIAdvisor:
             b64 = self._frame_to_base64(frame)
 
             prompt = (
-                f"You are a professional fitness trainer. "
+                f"You are a human fitness trainer giving real-time feedback. "
                 f"Analyze this image of a person performing a {exercise_name}. "
-                f"Identify any posture mistakes and give exactly ONE sentence of "
-                f"constructive feedback. Keep it short and encouraging — it will "
-                f"be read aloud by a voice assistant."
+                f"Give extremely short, punchy feedback (max 6 words). "
+                f"Be conversational, varied, and avoid robotic AI-speak. "
+                f"Examples: 'Drop your hips!', 'Looking good!', 'Straighten your back!'. "
+                f"Provide a unique, fresh phrasing this time."
             )
 
             response = self.client.chat.completions.create(
