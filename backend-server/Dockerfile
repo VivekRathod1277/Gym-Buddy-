@@ -1,7 +1,9 @@
 FROM python:3.10-slim
 
-# Install system dependencies for pyttsx3 (Text-to-Speech)
+# Install system dependencies for OpenCV and pyttsx3
 RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
     espeak \
     alsa-utils \
     && rm -rf /var/lib/apt/lists/*
