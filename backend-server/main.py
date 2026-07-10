@@ -13,7 +13,7 @@ from core.ai_advisor import AIAdvisor
 def main():
     video_source = 0
     exercise_file = "auto" # Default to AI auto-detection
-    slow_motion = False
+
     
     # Check for CLI arguments
     if len(sys.argv) > 1:
@@ -23,8 +23,7 @@ def main():
     else:
         exercise_file = "auto" # Force auto if not specified
         
-    if "--slow" in sys.argv:
-        slow_motion = True
+
         
     print(f"Using video source: {video_source}")
     print(f"Using blueprint: {exercise_file}")
@@ -177,7 +176,7 @@ def main():
         cv2.imshow('Gym Posture AI', image)
 
         # Handle Keyboard Inputs
-        key = cv2.waitKey(150 if slow_motion else 30) & 0xFF
+        key = cv2.waitKey(30) & 0xFF
         if key == ord('q'):
             break
         elif key == ord('a'):

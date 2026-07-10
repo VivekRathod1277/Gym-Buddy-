@@ -22,6 +22,31 @@ from core.ml_model import ExerciseClassifier
 
 router = APIRouter(prefix="/api/workout", tags=["workout"])
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def _find_blueprint(exercise_file: str) -> str:
+    """Find the exercise blueprint JSON, checking multiple possible locations."""
+    candidates = [
+        os.path.join(PROJECT_ROOT, "config", "exercises", exercise_file),
+        os.path.join(os.getcwd(), "config", "exercises", exercise_file),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config", "exercises", exercise_file),
+    ]
+    for path in candidates:
+        resolved = os.path.abspath(path)
+        if os.path.exists(resolved):
+            print(f"[BLUEPRINT] Found '{exercise_file}' at: {resolved}", flush=True)
+            return resolved
+    print(f"[BLUEPRINT] ERROR: '{exercise_file}' not found in any of these locations:", flush=True)
+    for path in candidates:
+        print(f"  - {os.path.abspath(path)}", flush=True)
+    print(f"[BLUEPRINT] CWD = {os.getcwd()}", flush=True)
+    print(f"[BLUEPRINT] PROJECT_ROOT = {PROJECT_ROOT}", flush=True)
+    print(f"[BLUEPRINT] __file__ = {os.path.abspath(__file__)}", flush=True)
+    return ""
+
+print(f"[STARTUP] PROJECT_ROOT resolved to: {PROJECT_ROOT}", flush=True)
+print(f"[STARTUP] CWD: {os.getcwd()}", flush=True)
+
 # Initialize advisor
 advisor = AIAdvisor()
 
@@ -105,7 +130,7 @@ def analyze_frame_endpoint(payload: AnalyzeFrameRequest, _: TokenData = Depends(
 @router.get("/exercises", response_model=List[str])
 def list_exercises(_: TokenData = Depends(get_current_user)):
     """List all exercises available in the system config blueprints."""
-    blueprint_dir = os.path.join("config", "exercises")
+    blueprint_dir = os.path.join(PROJECT_ROOT, "config", "exercises")
     if not os.path.exists(blueprint_dir):
         return ["pushup", "pullup", "squat", "bicep_curl"]
     
@@ -161,11 +186,11 @@ def process_video_task(
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
     exercise_name = exercise_file.replace(".json", "")
-    blueprint_path = os.path.join("config", "exercises", exercise_file)
+    blueprint_path = _find_blueprint(exercise_file)
     
-    if not os.path.exists(blueprint_path):
+    if not blueprint_path:
         tasks[task_id]["status"] = "failed"
-        tasks[task_id]["error"] = f"Exercise blueprint '{exercise_file}' not found."
+        tasks[task_id]["error"] = f"Exercise blueprint '{exercise_file}' not found. Check server logs for details."
         cap.release()
         out.release()
         return
@@ -401,11 +426,11 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
         
     print(f"[WS] Loading blueprint for {exercise_file}", flush=True)
     exercise_name = exercise_file.replace(".json", "")
-    blueprint_path = os.path.join("config", "exercises", exercise_file)
+    blueprint_path = _find_blueprint(exercise_file)
     
-    if not os.path.exists(blueprint_path):
+    if not blueprint_path:
         tasks[task_id]["status"] = "failed"
-        await websocket.send_json({"status": "failed", "error": f"Exercise blueprint '{exercise_file}' not found."})
+        await websocket.send_json({"status": "failed", "error": f"Exercise blueprint '{exercise_file}' not found. Check server logs for details."})
         cap.release()
         await websocket.close()
         return
@@ -437,12 +462,26 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
         processed_count = 0
         ai_last_trigger = 0
 
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+
+        # Only process every Nth frame. Use grab() to skip frames
+        # without decoding them — this is the key to real-time speed.
+        SKIP_FACTOR = 5
+
         while cap.isOpened():
-            ret, frame = cap.read()
+            # grab() reads the next frame without decoding — very fast
+            if not cap.grab():
+                break
+
+            processed_count += 1
+
+            # Only decode and process every Nth frame
+            if processed_count % SKIP_FACTOR != 0:
+                continue
+
+            ret, frame = cap.retrieve()
             if not ret:
                 break
-                
-            processed_count += 1
 
             image = frame.copy()
             rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -473,7 +512,7 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
                         if display_fault and display_fault != last_fault:
                             should_trigger = True
                             last_fault = display_fault
-                        elif processed_count - ai_last_trigger > fps * 4:  # every 4 seconds of video
+                        elif processed_count - ai_last_trigger > fps * 4:
                             should_trigger = True
                             
                     if should_trigger:
@@ -487,8 +526,8 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
 
             out.write(image)
 
-            # Send data over WebSocket
-            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 60])
+            # Send frame + data over WebSocket
+            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
             b64_img = base64.b64encode(buffer).decode('utf-8')
 
             await websocket.send_json({
@@ -498,10 +537,11 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
                 "angle": int(angle) if angle else 0,
                 "fault": display_fault,
                 "ai_tip": tip_text,
-                "exercise": exercise_name
+                "exercise": exercise_name,
+                "progress": round((processed_count / total_frames) * 100, 1)
             })
 
-            await asyncio.sleep(0.001) # yield to event loop so we process frames fast but don't block socket
+            await asyncio.sleep(0)  # yield to event loop
 
         cap.release()
         out.release()
@@ -570,3 +610,163 @@ def download_processed_video(filename: str):
             detail="Processed video file not found"
         )
     return FileResponse(file_path, media_type="video/mp4", filename=filename)
+
+
+@router.websocket("/ws/live-stream")
+async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: int = 1):
+    await websocket.accept()
+
+    print(f"[WS] Live stream started for user {user_id}, exercise {exercise}", flush=True)
+
+    exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
+    
+    # Wait for the first frame to auto-detect if auto
+    if exercise_file in ["auto", "auto.json"]:
+        try:
+            data = await websocket.receive_json()
+            if "frame" in data:
+                frame = decode_base64_frame(data["frame"])
+                print("[WS] Auto-detecting exercise from first frame...", flush=True)
+                detected = await asyncio.to_thread(advisor.detect_exercise, frame)
+                print(f"[WS] Detected exercise: {detected}", flush=True)
+                exercise_file = f"{detected}.json"
+            else:
+                exercise_file = "pushup.json"
+        except Exception as e:
+            print(f"[WS] Auto-detect failed: {e}", flush=True)
+            exercise_file = "pushup.json"
+
+    exercise_name = exercise_file.replace(".json", "")
+    blueprint_path = _find_blueprint(exercise_file)
+    
+    if not blueprint_path:
+        await websocket.send_json({"status": "failed", "error": f"Exercise blueprint '{exercise_file}' not found. Check server logs for details."})
+        await websocket.close()
+        return
+
+    try:
+        engine = PhysicsEngine(blueprint_path)
+        classifier = ExerciseClassifier()
+
+        mp_pose = mp.solutions.pose
+        pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        mp_drawing = mp.solutions.drawing_utils
+
+        tip_text = "Get into position, analysis will begin shortly."
+        last_rep_count = 0
+        display_reps = 0
+        display_fault = None
+        last_fault = None
+        angle = 0
+        processed_count = 0
+        ai_last_trigger = 0
+
+        while True:
+            data = await websocket.receive_json()
+            if "status" in data and data["status"] == "stop":
+                break
+
+            if "frame" not in data:
+                continue
+
+            frame_b64 = data["frame"]
+            try:
+                frame = decode_base64_frame(frame_b64)
+            except Exception as e:
+                print(f"Frame decode error: {e}")
+                continue
+
+            processed_count += 1
+            image = frame.copy()
+            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rgb_image.flags.writeable = False
+            results = pose.process(rgb_image)
+            rgb_image.flags.writeable = True
+
+            if results.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                    mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
+                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
+                )
+
+                _ = classifier.predict(results.pose_landmarks)
+                eval_data = engine.evaluate_frame(results.pose_landmarks.landmark)
+                if eval_data:
+                    display_reps = eval_data['reps']
+                    display_fault = eval_data['active_fault']
+                    angle = eval_data['angle']
+
+                    if display_reps > last_rep_count:
+                        last_rep_count = display_reps
+
+                    # Contextual coaching tips with AI Advisor
+                    should_trigger = False
+                    if processed_count > 30 and not advisor.is_analyzing:
+                        if display_fault and display_fault != last_fault:
+                            should_trigger = True
+                            last_fault = display_fault
+                        elif processed_count - ai_last_trigger > 60: # Assume roughly 15fps, so every 4s
+                            should_trigger = True
+                            
+                    if should_trigger:
+                        ai_last_trigger = processed_count
+                        def on_ai_received(text):
+                            nonlocal tip_text
+                            tip_text = text
+                        advisor.analyze_frame(frame, exercise_name, on_ai_received)
+                    elif not display_fault:
+                        last_fault = None
+
+            # Send back HUD data and processed frame
+            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
+            out_b64 = base64.b64encode(buffer).decode('utf-8')
+
+            await websocket.send_json({
+                "status": "processing",
+                "frame": out_b64,
+                "reps": display_reps,
+                "angle": int(angle) if angle else 0,
+                "fault": display_fault,
+                "ai_tip": tip_text,
+                "exercise": exercise_name
+            })
+            
+            await asyncio.sleep(0)
+
+        # On stop
+        session_data = engine.get_session_data()
+        from core.database import save_session
+        save_session(
+            user_id=user_id,
+            exercise_name=session_data["exercise"],
+            total_reps=session_data["total_reps"],
+            faults=session_data["faults_recorded"],
+            ai_suggestion=tip_text
+        )
+
+        final_result = {
+            "exercise": session_data["exercise"],
+            "total_reps": session_data["total_reps"],
+            "faults_recorded": session_data["faults_recorded"],
+            "ai_suggestion": tip_text
+        }
+
+        await websocket.send_json({
+            "status": "completed",
+            "result": final_result
+        })
+
+        await websocket.close()
+
+    except WebSocketDisconnect:
+        print(f"Live stream client disconnected")
+    except Exception as exc:
+        print(f"Live stream error: {exc}", flush=True)
+        import traceback
+        traceback.print_exc()
+        try:
+            await websocket.send_json({"status": "failed", "error": f"Server error: {str(exc)}"})
+        except Exception:
+            pass
+        await websocket.close()

@@ -9,6 +9,9 @@ import type { AnalysisStatus, InputMode, ExerciseType } from '@/types';
 import Sidebar from '@/components/Sidebar';
 import SessionSummaryModal from '@/components/SessionSummaryModal';
 
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://65.2.188.132:8000';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://65.2.188.132:8000';
+
 export default function WorkoutPage() {
   const [inputMode, setInputMode] = useState<InputMode>('upload');
   const [exerciseType, setExerciseType] = useState<ExerciseType>('auto');
@@ -25,11 +28,18 @@ export default function WorkoutPage() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null);
   const [liveFrame, setLiveFrame] = useState<string | null>(null);
+  const [detectedExercise, setDetectedExercise] = useState<string | null>(null);
+  const [webcamActive, setWebcamActive] = useState(false);
   const [skeletonJoints] = useState(() => generateSkeletonJoints());
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const faultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusStartTimeRef = useRef<number>(0);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   const { addSession } = useSessions();
   const { speak } = useVoice();
@@ -41,6 +51,12 @@ export default function WorkoutPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (faultTimeoutRef.current) clearTimeout(faultTimeoutRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
   }, []);
 
@@ -86,121 +102,287 @@ export default function WorkoutPage() {
     setElapsedTime(0);
     setProcessedVideoUrl(null);
     setLiveFrame(null);
+    setDetectedExercise(null);
 
-    speak('Initializing analysis. Uploading video...');
+    speak('Initializing analysis...');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
       const config = EXERCISE_CONFIGS[exerciseType];
-      const exerciseName = config.name === 'Auto Detect' ? 'Push-up' : config.name;
-      // We also send the exercise name if needed, though backend currently auto-detects or we can add it if supported.
-      
-      const uploadResponse = await api.post('/workout/process-video', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      const taskId = uploadResponse.data.task_id;
-      
-      setIsInitializing(false);
-      setStatus('active');
-      statusStartTimeRef.current = Date.now();
-      speak(`Processing video...`);
-      
-      // Open WebSocket connection to stream live processed frames
-      const ws = new WebSocket(`ws://127.0.0.1:8000/api/workout/ws/stream-video/${taskId}`);
-      
-      // Timer for elapsed time
-      intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
-      
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+      const exerciseName = config.name === 'Auto Detect' ? 'auto' : config.name;
+
+      if (inputMode === 'upload') {
+        const formData = new FormData();
+        formData.append('file', file!);
         
-        if (data.status === 'processing') {
-          if (data.frame) {
-            setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
-          }
-          if (data.reps !== undefined) {
-             setReps(prev => {
-                if (data.reps > prev) speak(`Rep ${data.reps}`);
-                return data.reps;
-             });
-          }
-          if (data.angle !== undefined) setAngle(data.angle);
-          if (data.ai_tip) {
-             setAiTip(prev => {
-                 if (prev !== data.ai_tip) speak(data.ai_tip);
-                 return data.ai_tip;
-             });
-          }
-          if (data.fault) {
-             setCurrentFault(prev => {
-                 if (prev !== data.fault) triggerFault(data.fault);
-                 return data.fault;
-             });
-          }
-        } else if (data.status === 'completed') {
-          ws.close();
-          if (intervalRef.current) clearInterval(intervalRef.current);
+        const uploadResponse = await api.post('/workout/process-video', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        const taskId = uploadResponse.data.task_id;
+        
+        setIsInitializing(false);
+        setStatus('active');
+        statusStartTimeRef.current = Date.now();
+        speak(`Processing video...`);
+        
+        const ws = new WebSocket(`${WS_URL}/api/workout/ws/stream-video/${taskId}`);
+        wsRef.current = ws;
+        
+        intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
+        
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
           
-          const result = data.result || {};
-          setReps(result.total_reps || 0);
-          setDetectedFaults(result.faults_recorded || []);
-          setAiTip(result.ai_suggestion || 'Great job!');
-          if (result.processed_video_url) {
-            setProcessedVideoUrl(result.processed_video_url);
+          if (data.status === 'processing') {
+            if (data.frame) setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
+            if (data.reps !== undefined) {
+               setReps(prev => {
+                  if (data.reps > prev) speak(`Rep ${data.reps}`);
+                  return data.reps;
+               });
+            }
+            if (data.angle !== undefined) {
+               setAngle(data.angle);
+            }
+            if (data.exercise) {
+               setDetectedExercise(data.exercise);
+            }
+            if (data.ai_tip) {
+               setAiTip(prev => {
+                   if (prev !== data.ai_tip) speak(data.ai_tip);
+                   return data.ai_tip;
+               });
+            }
+            if (data.fault) {
+               setCurrentFault(prev => {
+                   if (prev !== data.fault) triggerFault(data.fault);
+                   return data.fault;
+               });
+            }
+          } else if (data.status === 'completed') {
+            ws.close();
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            
+            const result = data.result || {};
+            setReps(result.total_reps || 0);
+            setDetectedFaults(result.faults_recorded || []);
+            setAiTip(result.ai_suggestion || 'Great job!');
+            if (result.processed_video_url) {
+              setProcessedVideoUrl(result.processed_video_url);
+            }
+            
+            setStatus('done');
+            speak('Session complete. Great work!');
+            
+            const sessionData = {
+              exerciseName: result.exercise || exerciseName,
+              totalReps: result.total_reps || 0,
+              faults: result.faults_recorded || [],
+              aiSuggestion: result.ai_suggestion || 'Great job!',
+              timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+              duration: Math.floor((Date.now() - statusStartTimeRef.current) / 1000),
+            };
+            
+            addSession(sessionData);
+            addToast(`Session saved! Total Reps: ${result.total_reps || 0}`, 'success');
+            setTimeout(() => setShowSummary(true), 1500);
+          } else if (data.status === 'failed') {
+            ws.close();
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            setStatus('idle');
+            addToast('Video processing failed: ' + data.error, 'error');
           }
-          
-          setStatus('done');
-          speak('Session complete. Great work!');
-          
-          const sessionData = {
-            exerciseName: result.exercise || exerciseName,
-            totalReps: result.total_reps || 0,
-            faults: result.faults_recorded || [],
-            aiSuggestion: result.ai_suggestion || 'Great job!',
-            timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
-            duration: Math.floor((Date.now() - statusStartTimeRef.current) / 1000),
-          };
-          
-          addSession(sessionData);
-          addToast(`Session saved! Total Reps: ${result.total_reps || 0}`, 'success');
-          
-          setTimeout(() => setShowSummary(true), 1500);
-        } else if (data.status === 'failed') {
-          ws.close();
+        };
+        
+        ws.onerror = () => {
           if (intervalRef.current) clearInterval(intervalRef.current);
           setStatus('idle');
-          addToast('Video processing failed: ' + data.error, 'error');
+          addToast('WebSocket connection error.', 'error');
+        };
+        
+        ws.onclose = () => {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          setStatus((prevStatus) => {
+            if (prevStatus === 'active' || prevStatus === 'scanning') {
+              return 'idle';
+            }
+            return prevStatus;
+          });
+        };
+      } else {
+        // Webcam Mode
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } catch (err) {
+          throw new Error('Camera access denied or not available.');
         }
-      };
-      
-      ws.onerror = () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setStatus('idle');
-        addToast('WebSocket connection error.', 'error');
-      };
-      
-      ws.onclose = () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        setStatus((prevStatus) => {
-          if (prevStatus === 'active' || prevStatus === 'scanning') {
-            addToast('WebSocket connection closed unexpectedly.', 'error');
-            return 'idle';
-          }
-          return prevStatus;
-        });
-      };
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setWebcamActive(true);
+        console.log('[Webcam] Camera stream acquired successfully');
 
-    } catch (err) {
-      console.error('Upload failed', err);
+        console.log('[WebSocket] Connecting to ' + WS_URL + '/api/workout/ws/live-stream?exercise=' + exerciseType);
+        const ws = new WebSocket(`${WS_URL}/api/workout/ws/live-stream?exercise=${exerciseType}`);
+        wsRef.current = ws;
+
+        let isProcessingFrame = false;
+        let wsConnected = false;
+
+        // Timeout: if WebSocket doesn't open within 10 seconds, abort
+        const connectTimeout = setTimeout(() => {
+          if (!wsConnected) {
+            console.error('[WebSocket] Connection timeout after 10s');
+            ws.close();
+            if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+            setWebcamActive(false);
+            setIsInitializing(false);
+            setStatus('idle');
+            addToast('Backend connection timed out. Is the server running on port 8000?', 'error');
+          }
+        }, 10000);
+
+        ws.onopen = () => {
+          wsConnected = true;
+          clearTimeout(connectTimeout);
+          console.log('[WebSocket] Connection opened successfully');
+          setIsInitializing(false);
+          setStatus('active');
+          statusStartTimeRef.current = Date.now();
+          speak(`Webcam active. Get in position.`);
+          intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
+
+          const sendFrame = () => {
+            if (ws.readyState !== WebSocket.OPEN) return;
+            
+            if (isProcessingFrame) {
+              // Wait for backend to catch up before sending the next frame
+              setTimeout(sendFrame, 50);
+              return;
+            }
+
+            if (videoRef.current && canvasRef.current) {
+              const canvas = canvasRef.current;
+              const video = videoRef.current;
+              if (video.videoWidth > 0 && video.videoHeight > 0) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                  const b64 = canvas.toDataURL('image/jpeg', 0.5);
+                  isProcessingFrame = true;
+                  ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
+                }
+              }
+            }
+            setTimeout(sendFrame, 100); // Attempt to send next frame after ~10fps
+          };
+          sendFrame();
+        };
+
+        ws.onmessage = (event) => {
+          isProcessingFrame = false; // Reset flag on response
+          const data = JSON.parse(event.data);
+          
+          if (data.status === 'processing') {
+            if (data.frame) setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
+            if (data.reps !== undefined) {
+               setReps(prev => {
+                  if (data.reps > prev) speak(`Rep ${data.reps}`);
+                  return data.reps;
+               });
+            }
+            if (data.angle !== undefined) setAngle(data.angle);
+            if (data.exercise) {
+               setDetectedExercise(data.exercise);
+            }
+            if (data.ai_tip) {
+               setAiTip(prev => {
+                   if (prev !== data.ai_tip) speak(data.ai_tip);
+                   return data.ai_tip;
+               });
+            }
+            if (data.fault) {
+               setCurrentFault(prev => {
+                   if (prev !== data.fault) triggerFault(data.fault);
+                   return data.fault;
+               });
+            }
+          } else if (data.status === 'completed') {
+            ws.close();
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            
+            const result = data.result || {};
+            setReps(result.total_reps || 0);
+            setDetectedFaults(result.faults_recorded || []);
+            setAiTip(result.ai_suggestion || 'Great job!');
+            
+            setStatus('done');
+            speak('Session complete. Great work!');
+            
+            const sessionData = {
+              exerciseName: result.exercise || exerciseName,
+              totalReps: result.total_reps || 0,
+              faults: result.faults_recorded || [],
+              aiSuggestion: result.ai_suggestion || 'Great job!',
+              timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+              duration: Math.floor((Date.now() - statusStartTimeRef.current) / 1000),
+            };
+            
+            addSession(sessionData);
+            addToast(`Session saved! Total Reps: ${result.total_reps || 0}`, 'success');
+            setTimeout(() => setShowSummary(true), 1500);
+          } else if (data.status === 'failed') {
+            ws.close();
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            setStatus('idle');
+            addToast('Analysis failed: ' + data.error, 'error');
+          }
+        };
+
+        ws.onerror = (e) => {
+          console.error('[WebSocket] Connection error:', e);
+          clearTimeout(connectTimeout);
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+          setWebcamActive(false);
+          setIsInitializing(false);
+          setStatus('idle');
+          addToast('WebSocket connection error. Is the backend running on port 8000?', 'error');
+        };
+
+        ws.onclose = (e) => {
+          console.log('[WebSocket] Connection closed. Code:', e.code, 'Reason:', e.reason);
+          clearTimeout(connectTimeout);
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+          setWebcamActive(false);
+          setIsInitializing(false);
+          setStatus((prevStatus) => {
+            if (prevStatus === 'active' || prevStatus === 'scanning') {
+              return 'idle';
+            }
+            return prevStatus;
+          });
+        };
+      }
+    } catch (err: any) {
+      console.error('Initialization failed', err);
       setIsInitializing(false);
       setStatus('idle');
-      addToast('Failed to upload video.', 'error');
+      addToast(err.message || 'Failed to start analysis.', 'error');
     }
   }, [inputMode, file, exerciseType, speak, addSession, addToast]);
-
   const handleNewSession = useCallback(() => {
     setStatus('idle');
     setReps(0);
@@ -215,8 +397,23 @@ export default function WorkoutPage() {
     setElapsedTime(0);
     setProcessedVideoUrl(null);
     setLiveFrame(null);
+    setDetectedExercise(null);
+    setWebcamActive(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (faultTimeoutRef.current) clearTimeout(faultTimeoutRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+  }, []);
+
+  const stopAnalysis = useCallback(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ status: 'stop' }));
+    }
+    // Set status to done early to trigger cleanup in onmessage? No, the backend will send 'completed'.
   }, []);
 
   const statusConfig = {
@@ -228,9 +425,10 @@ export default function WorkoutPage() {
 
   const currentStatus = statusConfig[status];
   const isActive = status === 'active';
-  const exerciseConfig = EXERCISE_CONFIGS[exerciseType];
-  const exerciseName = exerciseConfig.name === 'Auto Detect' ? 'Push-up' : exerciseConfig.name;
-  const exerciseColor = EXERCISE_COLORS[exerciseName] || '#00d4ff';
+  const effectiveExercise = detectedExercise || exerciseType;
+  const exerciseConfig = EXERCISE_CONFIGS[effectiveExercise as ExerciseType] || EXERCISE_CONFIGS.auto;
+  const exerciseName = exerciseConfig.name === 'Auto Detect' ? 'Auto Detect' : exerciseConfig.name;
+  const exerciseColor = EXERCISE_COLORS[effectiveExercise as ExerciseType] || '#00d4ff';
 
   return (
     <div className="min-h-screen flex" style={{ background: '#0a0a0f' }}>
@@ -337,34 +535,52 @@ export default function WorkoutPage() {
                 </div>
               )}
 
-              {/* Start Button */}
-              <button
-                onClick={startAnalysis}
-                disabled={isInitializing || isActive || (inputMode === 'upload' && !file)}
-                className="gradient-btn w-full py-4 flex items-center justify-center gap-2 mt-auto"
-                style={
-                  isInitializing
-                    ? {
-                        background: 'linear-gradient(135deg, #00d4ff, #7b2ff7)',
-                        backgroundSize: '200% 100%',
-                        animation: 'shimmer 1.5s ease-in-out infinite',
-                      }
-                    : {}
-                }
-              >
-                {isInitializing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-[#0a0a0f] border-t-transparent rounded-full animate-spin-loader" />
-                    INITIALIZING...
-                  </>
-                ) : (
-                  <>
-                    <span className="text-lg">&#9654;</span>
-                    START ANALYSIS
-                  </>
-                )}
-              </button>
+              {/* Start/Stop Button */}
+              {isActive ? (
+                <button
+                  onClick={stopAnalysis}
+                  className="gradient-btn w-full py-4 flex items-center justify-center gap-2 mt-auto"
+                  style={{
+                    background: 'linear-gradient(135deg, #ff4d6d, #d90429)',
+                    boxShadow: '0 0 15px rgba(255, 77, 109, 0.4)'
+                  }}
+                >
+                  <span className="text-lg">&#9724;</span>
+                  STOP ANALYSIS
+                </button>
+              ) : (
+                <button
+                  onClick={startAnalysis}
+                  disabled={isInitializing || (inputMode === 'upload' && !file)}
+                  className="gradient-btn w-full py-4 flex items-center justify-center gap-2 mt-auto"
+                  style={
+                    isInitializing
+                      ? {
+                          background: 'linear-gradient(135deg, #00d4ff, #7b2ff7)',
+                          backgroundSize: '200% 100%',
+                          animation: 'shimmer 1.5s ease-in-out infinite',
+                        }
+                      : {}
+                  }
+                >
+                  {isInitializing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#0a0a0f] border-t-transparent rounded-full animate-spin-loader" />
+                      INITIALIZING...
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg">&#9654;</span>
+                      START ANALYSIS
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+
+            {/* Hidden video and canvas for webcam capture */}
+            <video ref={videoRef} className="hidden" playsInline muted />
+            <canvas ref={canvasRef} className="hidden" />
 
             {/* Live Feed Panel */}
             <div className="glass-card flex flex-col overflow-hidden flex-1" style={{ padding: 0 }}>
@@ -373,6 +589,22 @@ export default function WorkoutPage() {
                 className="relative flex-1 bg-black overflow-hidden"
                 style={{ minHeight: '300px' }}
               >
+                {/* Raw Webcam Feed - shown while webcam is active as fallback */}
+                {webcamActive && status !== 'done' && (
+                  <video
+                    ref={(el) => {
+                      if (el && streamRef.current) {
+                        el.srcObject = streamRef.current;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full object-contain bg-black"
+                    style={{ zIndex: 5, transform: 'scaleX(-1)' }}
+                    playsInline
+                    muted
+                    autoPlay
+                  />
+                )}
                 {/* Idle State */}
                 {status === 'idle' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -502,7 +734,7 @@ export default function WorkoutPage() {
                 {/* Done State - Real Processed Video */}
                 {status === 'done' && processedVideoUrl && (
                   <video
-                    src={`http://127.0.0.1:8000${processedVideoUrl}`}
+                    src={`${API_BASE}${processedVideoUrl}`}
                     className="absolute inset-0 w-full h-full object-contain bg-black z-30"
                     autoPlay
                     controls

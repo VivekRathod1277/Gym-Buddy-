@@ -146,6 +146,68 @@
     border-color: #ff4d6d;
   }
 
+  /* Transparent input variant for the auth page */
+  .auth-input {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  .auth-input::placeholder {
+    color: rgba(200, 200, 230, 0.25) !important;
+  }
+
+  .auth-input:focus {
+    border-color: rgba(0, 212, 255, 0.4) !important;
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08), 0 0 16px rgba(0, 212, 255, 0.12) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  /* Glass submit button for auth page */
+  .auth-submit-btn {
+    position: relative;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(123, 47, 247, 0.15));
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: pointer;
+    transition: all 300ms ease;
+    overflow: hidden;
+  }
+
+  .auth-submit-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    opacity: 0;
+    transition: opacity 300ms ease;
+    z-index: -1;
+  }
+
+  .auth-submit-btn:hover {
+    border-color: rgba(0, 212, 255, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 32px rgba(0, 212, 255, 0.25), 0 0 16px rgba(123, 47, 247, 0.2);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(123, 47, 247, 0.25));
+  }
+
+  .auth-submit-btn:active {
+    transform: translateY(0);
+  }
+
+  .auth-submit-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
   .sidebar-nav-item {
     width: 100%;
     height: 44px;

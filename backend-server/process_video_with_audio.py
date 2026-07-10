@@ -27,8 +27,7 @@ def main():
         base, ext = os.path.splitext(video_source)
         output_video_path = f"{base}_processed{ext}"
 
-    # Slow motion factor (e.g., 2.0 = half speed / 2x duration)
-    slow_motion_factor = 2.0
+
 
     print(f"Opening video source: {video_source}")
     cap = cv2.VideoCapture(video_source)
@@ -60,12 +59,11 @@ def main():
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Adjust output FPS for slow motion
-    fps_output = fps / slow_motion_factor
+    fps_output = fps
 
-    print(f"Video Info: {width}x{height} @ {fps:.2f} FPS (Output slow-motion: {fps_output:.2f} FPS). Total frames: {total_frames}")
+    print(f"Video Info: {width}x{height} @ {fps:.2f} FPS. Total frames: {total_frames}")
 
-    # Init Video Writer for temporary silent video at slower frame rate
+    # Init Video Writer for temporary silent video
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(temp_silent_video, fourcc, fps_output, (width, height))
     if not out.isOpened():
