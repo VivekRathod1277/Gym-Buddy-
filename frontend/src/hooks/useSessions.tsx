@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface SessionsContextType {
   sessions: ExerciseSession[];
-  addSession: (session: Omit<ExerciseSession, 'id'>) => Promise<void>;
+  addSession: (session: Omit<ExerciseSession, 'id' | 'userId'>) => Promise<void>;
   totalSessions: number;
   totalReps: number;
   totalXP: number;
@@ -50,7 +50,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
     fetchSessions();
   }, [fetchSessions]);
 
-  const addSession = useCallback(async (session: Omit<ExerciseSession, 'id'>) => {
+  const addSession = useCallback(async (session: Omit<ExerciseSession, 'id' | 'userId'>) => {
     try {
       await api.post('/sessions', {
         exercise_name: session.exerciseName,
@@ -66,6 +66,7 @@ export function SessionsProvider({ children }: { children: ReactNode }) {
       const newSession: ExerciseSession = {
         ...session,
         id: Date.now().toString(),
+        userId: user?.id || 'anonymous',
       };
       setSessions(prev => [newSession, ...prev]);
     }
