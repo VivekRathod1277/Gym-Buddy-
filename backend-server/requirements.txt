@@ -11,3 +11,4 @@ uvicorn
 pyjwt
 python-multipart
 email-validator
+websockets
