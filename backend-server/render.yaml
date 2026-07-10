@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gym-posture-backend
+    env: docker
+    region: ohio
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 8000
