@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://65.2.188.132:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://gym-buddy-rkqw.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_URL,

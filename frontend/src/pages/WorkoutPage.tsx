@@ -9,8 +9,8 @@ import type { AnalysisStatus, InputMode, ExerciseType } from '@/types';
 import Sidebar from '@/components/Sidebar';
 import SessionSummaryModal from '@/components/SessionSummaryModal';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://65.2.188.132:8000';
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://65.2.188.132:8000';
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://gym-buddy-rkqw.onrender.com';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://gym-buddy-rkqw.onrender.com';
 
 export default function WorkoutPage() {
   const [inputMode, setInputMode] = useState<InputMode>('upload');
