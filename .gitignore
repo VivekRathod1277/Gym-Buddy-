@@ -33,6 +33,7 @@ Desktop.ini
 
 # Video files (large binary — store separately)
 *.mp4
+!frontend/public/login-bg.mp4
 *.mov
 *.avi
 *.mkv
