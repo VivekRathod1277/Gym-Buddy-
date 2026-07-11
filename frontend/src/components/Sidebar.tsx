@@ -80,7 +80,7 @@ export default function Sidebar() {
           onClick={toggleMute}
           className="sidebar-nav-item hover:bg-white/[0.03]"
         >
-          <span className="text-lg">{isMuted ? '&#128263;' : '&#128266;'}</span>
+          <span className="text-lg">{isMuted ? '🔇' : '🔊'}</span>
           <span>{isMuted ? 'UNMUTE VOICE' : 'MUTE VOICE'}</span>
           {isMuted && (
             <span className="w-2 h-2 rounded-full bg-[#ff4d6d] ml-auto" />
