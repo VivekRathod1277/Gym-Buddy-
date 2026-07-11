@@ -60,14 +60,17 @@ export default function AuthPage() {
   return (
     <div className="auth-page">
 
-      {/* ===== BACKGROUND: Video ===== */}
-      <div className="auth-video-background">
+      {/* ===== LEFT: Video Side ===== */}
+      <div className="auth-video-side">
         <video autoPlay loop muted playsInline className="auth-video">
           <source src="/login-bg.mp4" type="video/mp4" />
         </video>
 
         {/* Vignette */}
         <div className="auth-video-vignette" />
+
+        {/* Gradient fade into panel */}
+        <div className="auth-video-fade" />
 
         {/* Branding on video */}
         <div
@@ -232,20 +235,18 @@ export default function AuthPage() {
       {/* ===== Styles ===== */}
       <style>{`
         .auth-page {
-          position: relative;
           display: flex;
-          justify-content: flex-end;
           min-height: 100vh;
           width: 100%;
           overflow: hidden;
           background: #080810;
         }
 
-        /* ---- Video Background ---- */
-        .auth-video-background {
-          position: absolute;
-          inset: 0;
-          z-index: 0;
+        /* ---- Video Side ---- */
+        .auth-video-side {
+          position: relative;
+          flex: 1 1 55%;
+          min-height: 100vh;
           overflow: hidden;
         }
 
@@ -260,7 +261,17 @@ export default function AuthPage() {
         .auth-video-vignette {
           position: absolute;
           inset: 0;
-          background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.1) 0%, rgba(8,8,16,0.85) 100%);
+          background: radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.55) 100%);
+          pointer-events: none;
+        }
+
+        .auth-video-fade {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 180px;
+          height: 100%;
+          background: linear-gradient(to right, transparent, #080810);
           pointer-events: none;
         }
 
@@ -303,22 +314,14 @@ export default function AuthPage() {
         /* ---- Panel Side ---- */
         .auth-panel {
           position: relative;
-          z-index: 10;
-          flex: 0 0 480px;
-          max-width: 480px;
+          flex: 0 0 460px;
+          max-width: 460px;
           min-height: 100vh;
           display: flex;
           flex-direction: column;
           justify-content: center;
           padding: 48px 52px;
-          
-          /* Glassmorphism */
-          background: rgba(8, 8, 16, 0.45);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border-left: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: -10px 0 40px rgba(0, 0, 0, 0.4);
-          
+          background: #080810;
           transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
           overflow-y: auto;
         }
@@ -481,10 +484,8 @@ export default function AuthPage() {
         .auth-input {
           width: 100%;
           padding: 14px 14px 14px 42px;
-          background: rgba(255,255,255,0.03);
+          background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.08);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
           border-radius: 12px;
           color: #fff;
           font-family: 'Inter', sans-serif;
@@ -635,15 +636,13 @@ export default function AuthPage() {
 
         /* Responsive */
         @media (max-width: 900px) {
-          .auth-video-brand {
+          .auth-video-side {
             display: none !important;
           }
           .auth-panel {
             flex: 1 1 100% !important;
             max-width: 100% !important;
             padding: 40px 28px;
-            border-left: none;
-            background: rgba(8, 8, 16, 0.65);
           }
           .auth-panel-bottom {
             left: 28px;
