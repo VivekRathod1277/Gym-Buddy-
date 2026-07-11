@@ -637,15 +637,19 @@ export default function WorkoutPage() {
                       Initializing AI analysis...
                     </p>
                     <div
-                      className="w-[120px] h-[3px] rounded-full overflow-hidden"
-                      style={{ background: 'rgba(0, 212, 255, 0.15)' }}
+                      className="w-[200px] h-[4px] rounded-full overflow-hidden relative"
+                      style={{ 
+                        background: 'rgba(0, 212, 255, 0.1)',
+                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)'
+                      }}
                     >
                       <div
-                        className="h-full rounded-full"
+                        className="h-full rounded-full absolute"
                         style={{
-                          background: '#00d4ff',
-                          width: '40%',
+                          background: 'linear-gradient(90deg, transparent, #00d4ff, #7b2ff7, transparent)',
+                          width: '100%',
                           animation: 'loadingBar 1.5s ease-in-out infinite',
+                          boxShadow: '0 0 10px rgba(0, 212, 255, 0.8)'
                         }}
                       />
                     </div>

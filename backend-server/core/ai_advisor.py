@@ -41,8 +41,14 @@ class AIAdvisor:
         """Convert an OpenCV BGR frame to a base64-encoded JPEG string."""
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pil_img = PIL.Image.fromarray(img_rgb)
+        
+        # Downscale to max 512px to prevent API timeouts and reduce latency
+        max_size = 512
+        if pil_img.width > max_size or pil_img.height > max_size:
+            pil_img.thumbnail((max_size, max_size), PIL.Image.Resampling.LANCZOS)
+            
         buffer = io.BytesIO()
-        pil_img.save(buffer, format="JPEG", quality=85)
+        pil_img.save(buffer, format="JPEG", quality=80)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     def _build_vision_messages(self, prompt: str, b64_image: str) -> list:

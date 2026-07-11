@@ -620,6 +620,10 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
     
+    mp_pose = mp.solutions.pose
+    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    mp_drawing = mp.solutions.drawing_utils
+
     if exercise_file in ["auto", "auto.json"]:
         try:
             detected = None
@@ -631,15 +635,26 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 if "frame" in data:
                     frame = decode_base64_frame(data["frame"])
                     print("[WS] Auto-detecting exercise from frame...", flush=True)
+                    
+                    image = frame.copy()
+                    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    rgb_image.flags.writeable = False
+                    results = pose.process(rgb_image)
+                    rgb_image.flags.writeable = True
+
+                    if results.pose_landmarks:
+                        mp_drawing.draw_landmarks(
+                            image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                            mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
+                            mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
+                        )
+
                     detected = await asyncio.to_thread(advisor.detect_exercise, frame)
                     if detected and detected.lower() not in ["unknown", "none", "", "auto"]:
                         print(f"[WS] Detected exercise: {detected}", flush=True)
                         exercise_file = f"{detected}.json"
                         break
                     else:
-                        import cv2
-                        import base64
-                        image = frame.copy()
                         cv2.putText(image, "Detecting exercise... Please get in position", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
                         _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
                         out_b64 = base64.b64encode(buffer).decode('utf-8')
@@ -667,10 +682,6 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     try:
         engine = PhysicsEngine(blueprint_path)
         classifier = ExerciseClassifier()
-
-        mp_pose = mp.solutions.pose
-        pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-        mp_drawing = mp.solutions.drawing_utils
 
         tip_text = "Get into position, analysis will begin shortly."
         last_rep_count = 0
