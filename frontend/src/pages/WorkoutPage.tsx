@@ -260,7 +260,7 @@ export default function WorkoutPage() {
             
             if (isProcessingFrame) {
               // Wait for backend to catch up before sending the next frame
-              setTimeout(sendFrame, 50);
+              setTimeout(sendFrame, 16);
               return;
             }
 
@@ -268,18 +268,27 @@ export default function WorkoutPage() {
               const canvas = canvasRef.current;
               const video = videoRef.current;
               if (video.videoWidth > 0 && video.videoHeight > 0) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                const MAX_WIDTH = 640;
+                let width = video.videoWidth;
+                let height = video.videoHeight;
+                
+                if (width > MAX_WIDTH) {
+                  height = Math.floor(height * (MAX_WIDTH / width));
+                  width = MAX_WIDTH;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
-                  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(video, 0, 0, width, height);
                   const b64 = canvas.toDataURL('image/jpeg', 0.5);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
                 }
               }
             }
-            setTimeout(sendFrame, 100); // Attempt to send next frame after ~10fps
+            setTimeout(sendFrame, 33); // Attempt to send next frame for ~30fps
           };
           sendFrame();
         };

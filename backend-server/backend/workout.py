@@ -626,15 +626,21 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
     if exercise_file in ["auto", "auto.json"]:
         try:
-            detected = None
-            while not detected or detected in ["unknown", "none", ""]:
+            detected_exercise = None
+            is_detecting = False
+
+            def on_detected(result):
+                nonlocal detected_exercise, is_detecting
+                detected_exercise = result
+                is_detecting = False
+
+            while not detected_exercise or detected_exercise in ["unknown", "none", ""]:
                 data = await websocket.receive_json()
                 if "status" in data and data["status"] == "stop":
                     await websocket.close()
                     return
                 if "frame" in data:
                     frame = decode_base64_frame(data["frame"])
-                    print("[WS] Auto-detecting exercise from frame...", flush=True)
                     
                     image = frame.copy()
                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -649,10 +655,20 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                             mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
                         )
 
-                    detected = await asyncio.to_thread(advisor.detect_exercise, frame)
-                    if detected and detected.lower() not in ["unknown", "none", "", "auto"]:
-                        print(f"[WS] Detected exercise: {detected}", flush=True)
-                        exercise_file = f"{detected}.json"
+                    if not is_detecting:
+                        is_detecting = True
+                        print("[WS] Auto-detecting exercise from frame...", flush=True)
+                        async def run_detection(f):
+                            try:
+                                res = await asyncio.to_thread(advisor.detect_exercise, f)
+                                on_detected(res)
+                            except Exception:
+                                on_detected("unknown")
+                        asyncio.create_task(run_detection(frame))
+
+                    if detected_exercise and detected_exercise.lower() not in ["unknown", "none", "", "auto"]:
+                        print(f"[WS] Detected exercise: {detected_exercise}", flush=True)
+                        exercise_file = f"{detected_exercise}.json"
                         break
                     else:
                         cv2.putText(image, "Detecting exercise... Please get in position", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
@@ -667,6 +683,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                             "angle": 0,
                             "fault": None
                         })
+                        await asyncio.sleep(0)
         except Exception as e:
             print(f"[WS] Auto-detect failed: {e}", flush=True)
             exercise_file = "pushup.json"
