@@ -296,7 +296,7 @@ export default function WorkoutPage() {
           const data = JSON.parse(event.data);
           
           if (data.status === 'processing') {
-            if (data.frame) setLiveFrame(`data:image/webp;base64,${data.frame}`);
+            if (data.frame) setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
             if (data.reps !== undefined) {
                setReps(prev => {
                   if (data.reps > prev) speak(`Rep ${data.reps}`);
@@ -667,9 +667,9 @@ export default function WorkoutPage() {
                 {/* Active State */}
                 {(isActive || status === 'done') && !processedVideoUrl && (
                   <div className="absolute inset-0">
-                    
-                    {/* Processing Overlay for Upload Mode */}
-                    {inputMode === 'upload' && (
+
+                    {/* Processing Spinner - shown only before first frame arrives */}
+                    {inputMode === 'upload' && !liveFrame && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: '#242730', zIndex: 10 }}>
                         <div className="relative w-32 h-32 flex items-center justify-center">
                           <div className="absolute inset-0 rounded-full" style={{
@@ -692,7 +692,7 @@ export default function WorkoutPage() {
                       </div>
                     )}
 
-                    {/* Raw Video Feed Background */}
+                    {/* Raw Video Feed Background (webcam only, hidden during upload) */}
                     <video 
                       ref={videoRef} 
                       className="absolute inset-0 w-full h-full object-contain rounded-xl z-0" 
@@ -701,13 +701,12 @@ export default function WorkoutPage() {
                       playsInline 
                     />
 
-                    {/* Live Frame Overlay (Websocket MJPEG) */}
-                    {liveFrame && status === 'active' && inputMode === 'webcam' && (
+                    {/* Live Processed Frame Overlay (both upload and webcam) */}
+                    {liveFrame && status === 'active' && (
                       <img
                         src={liveFrame}
                         alt="Live Processed Frame"
                         className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
-                        style={{ transform: 'scaleX(-1)' }}
                       />
                     )}
                   </div>

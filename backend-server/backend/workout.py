@@ -77,6 +77,57 @@ def decode_base64_frame(b64_str: str) -> np.ndarray:
             detail=f"Invalid base64 frame encoding: {e}"
         )
 
+def draw_hud_overlay(image, exercise_name, display_reps, angle, display_fault, tip_text, is_analyzing=False):
+    """
+    Draw the Premium HUD overlay on a frame.
+    Matches the desktop main.py overlay: top header bar, rep counter, joint angle,
+    AI advisor panel, and fault warning banner.
+    """
+    h, w = image.shape[:2]
+
+    # --- Top Glassmorphism Header ---
+    overlay = image.copy()
+    cv2.rectangle(overlay, (0, 0), (w, 100), (20, 20, 20), -1)
+    image = cv2.addWeighted(overlay, 0.7, image, 0.3, 0)
+
+    # Divider Line (Neon Cyan)
+    cv2.line(image, (0, 100), (w, 100), (0, 255, 255), 2)
+
+    # Exercise Name
+    cv2.putText(image, "ACTIVE SESSION", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(image, f"{exercise_name.upper()}", (30, 80), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+
+    # Rep Counter (center)
+    cv2.putText(image, "REPS", (w//2 - 50, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(image, f"{display_reps:02d}", (w//2 - 60, 85), cv2.FONT_HERSHEY_DUPLEX, 1.8, (0, 255, 0), 3, cv2.LINE_AA)
+
+    # Joint Angle (right side)
+    cv2.putText(image, "JOINT ANGLE", (w - 180, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(image, f"{int(angle)}deg", (w - 180, 80), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+
+    # --- AI Advisor Panel ---
+    if tip_text and tip_text != "Get into position, analysis will begin shortly.":
+        cv2.rectangle(image, (20, 120), (w - 20, 180), (100, 50, 0), -1)
+        cv2.putText(image, "GEMINI AI ADVISOR:", (35, 145), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1, cv2.LINE_AA)
+        display_tip = tip_text[:75] + "..." if len(tip_text) > 75 else tip_text
+        cv2.putText(image, display_tip, (35, 170), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    elif is_analyzing:
+        cv2.putText(image, "GEMINI IS ANALYZING...", (30, 145), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 1, cv2.LINE_AA)
+
+    # --- Fault Warning Banner (bottom) ---
+    if display_fault:
+        warning_overlay = image.copy()
+        cv2.rectangle(warning_overlay, (0, h - 70), (w, h), (0, 0, 200), -1)
+        image = cv2.addWeighted(warning_overlay, 0.8, image, 0.2, 0)
+
+        cv2.putText(image, "CORRECTION REQUIRED", (w//2 - 130, h - 45),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 255), 1, cv2.LINE_AA)
+        fault_text = f"> {display_fault.upper()} <"
+        cv2.putText(image, fault_text, (w//2 - (len(display_fault)*8), h - 15),
+                    cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+
+    return image
+
 # ─────────────────────────────────────────────
 #  Exercise Detection and Frame Coaching
 # ─────────────────────────────────────────────
@@ -527,6 +578,9 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
                     elif not display_fault:
                         last_fault = None
 
+            # Draw the HUD overlay on the frame (exercise name, reps, angle, AI tip, faults)
+            image = draw_hud_overlay(image, exercise_name, display_reps, angle, display_fault, tip_text, advisor.is_analyzing)
+
             out.write(image)
 
             # Send frame + data over WebSocket
@@ -650,7 +704,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                     results = pose.process(rgb_image)
                     rgb_image.flags.writeable = True
 
-                    image = np.zeros((frame.shape[0], frame.shape[1], 3), dtype=np.uint8)
+                    image = frame.copy()
 
                     if results.pose_landmarks:
                         mp_drawing.draw_landmarks(
@@ -675,12 +729,15 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                         exercise_file = f"{detected_exercise}.json"
                         break
                     else:
-                        cv2.putText(image, "Detecting exercise... Please get in position", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+                        # Draw detecting message on the frame
+                        h, w = image.shape[:2]
+                        overlay = image.copy()
+                        cv2.rectangle(overlay, (0, 0), (w, 80), (20, 20, 20), -1)
+                        image = cv2.addWeighted(overlay, 0.7, image, 0.3, 0)
+                        cv2.putText(image, "DETECTING EXERCISE...", (30, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
+                        cv2.putText(image, "Please get in position", (30, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
                         
-                        b, g, r = cv2.split(image)
-                        alpha = np.where((b == 0) & (g == 0) & (r == 0), 0, 255).astype(np.uint8)
-                        image_bgra = cv2.merge((b, g, r, alpha))
-                        _, buffer = cv2.imencode('.webp', image_bgra, [cv2.IMWRITE_WEBP_QUALITY, 50])
+                        _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
                         out_b64 = base64.b64encode(buffer).decode('utf-8')
                         await websocket.send_json({
                             "status": "processing",
@@ -738,7 +795,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
             results = pose.process(rgb_image)
             rgb_image.flags.writeable = True
 
-            image = np.zeros((frame.shape[0], frame.shape[1], 3), dtype=np.uint8)
+            # Draw skeleton on the actual frame (not a black canvas)
+            image = frame.copy()
 
             if results.pose_landmarks:
                 mp_drawing.draw_landmarks(
@@ -775,11 +833,11 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                     elif not display_fault:
                         last_fault = None
 
-            # Send back HUD data and transparent processed frame
-            b, g, r = cv2.split(image)
-            alpha = np.where((b == 0) & (g == 0) & (r == 0), 0, 255).astype(np.uint8)
-            image_bgra = cv2.merge((b, g, r, alpha))
-            _, buffer = cv2.imencode('.webp', image_bgra, [cv2.IMWRITE_WEBP_QUALITY, 50])
+            # Draw the HUD overlay on the frame
+            image = draw_hud_overlay(image, exercise_name, display_reps, angle, display_fault, tip_text, advisor.is_analyzing)
+
+            # Send full annotated frame as JPEG
+            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
             out_b64 = base64.b64encode(buffer).decode('utf-8')
 
             await websocket.send_json({
