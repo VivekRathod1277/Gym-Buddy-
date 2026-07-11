@@ -44,6 +44,9 @@ def main():
         ret, first_frame = cap.read()
         if ret:
             detected = advisor.detect_exercise(first_frame)
+            if detected == "unknown":
+                print("AI returned unknown, falling back to pushup")
+                detected = "pushup"
             exercise_file = f"{detected}.json"
             voice.speak(f"Detected {detected}. Loading model.")
             # Reset video pointer after analysis frame

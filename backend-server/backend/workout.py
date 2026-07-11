@@ -418,6 +418,9 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
             print("[WS] Read first frame, detecting exercise...", flush=True)
             detected = await asyncio.to_thread(advisor.detect_exercise, frame)
             print(f"[WS] Detected exercise: {detected}", flush=True)
+            if detected == "unknown":
+                print("[WS] AI returned unknown, falling back to squat", flush=True)
+                detected = "squat"
             exercise_file = f"{detected}.json"
         else:
             print("[WS] Failed to read first frame for auto detect", flush=True)

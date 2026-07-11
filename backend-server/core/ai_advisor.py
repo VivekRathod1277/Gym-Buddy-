@@ -29,7 +29,7 @@ class AIAdvisor:
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key=api_key,
         )
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-2.0-flash"
         self.is_analyzing = False
         self.last_suggestion = ""
 

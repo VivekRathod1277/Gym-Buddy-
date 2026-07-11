@@ -110,6 +110,7 @@ export default function WorkoutPage() {
       if (inputMode === 'upload') {
         const formData = new FormData();
         formData.append('file', file!);
+        formData.append('exercise', exerciseName);
         
         const uploadResponse = await api.post('/workout/process-video', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
