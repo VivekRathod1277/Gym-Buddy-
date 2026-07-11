@@ -419,9 +419,10 @@ export default function WorkoutPage() {
   const stopAnalysis = useCallback(() => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ status: 'stop' }));
+      wsRef.current.close();
     }
-    // Set status to done early to trigger cleanup in onmessage? No, the backend will send 'completed'.
-  }, []);
+    resetState();
+  }, [resetState]);
 
   const statusConfig = {
     idle: { color: '#555580', text: 'IDLE', dot: false },
@@ -665,71 +666,27 @@ export default function WorkoutPage() {
 
                 {/* Active State - Video Feed with Skeleton */}
                 {(isActive || status === 'done') && !processedVideoUrl && (
-                  <div className="absolute inset-0">
-                    {/* Mock video background - person silhouette */}
-                    <div
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{
-                        background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 100%)',
-                      }}
-                    >
-                      {/* Person silhouette representation */}
-                      <svg
-                        viewBox="0 0 200 300"
-                        className="h-full opacity-40"
-                        style={{ maxWidth: '80%' }}
-                      >
-                        {/* Body outline */}
-                        <ellipse cx="100" cy="40" rx="25" ry="30" fill="#8888aa" opacity="0.3" />
-                        <rect x="75" y="70" width="50" height="100" rx="15" fill="#8888aa" opacity="0.2" />
-                        <rect x="85" y="170" width="15" height="80" rx="5" fill="#8888aa" opacity="0.2" />
-                        <rect x="100" y="170" width="15" height="80" rx="5" fill="#8888aa" opacity="0.2" />
-                        <rect x="55" y="80" width="20" height="70" rx="5" fill="#8888aa" opacity="0.2" />
-                        <rect x="125" y="80" width="20" height="70" rx="5" fill="#8888aa" opacity="0.2" />
-                      </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: '#242730', zIndex: 10 }}>
+                    <div className="relative w-32 h-32 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full" style={{
+                        background: '#242730',
+                        boxShadow: '8px 8px 16px #1b1d24, -8px -8px 16px #2d313c'
+                      }} />
+                      <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-[#00d4ff] border-r-[#7b2ff7]" style={{
+                        animation: 'spin-loader 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite'
+                      }} />
+                      <div className="absolute inset-4 rounded-full" style={{
+                        background: '#242730',
+                        boxShadow: 'inset 4px 4px 8px #1b1d24, inset -4px -4px 8px #2d313c'
+                      }} />
+                      <span className="relative z-10 text-3xl animate-pulse text-[#00d4ff]">&#128187;</span>
                     </div>
-
-                    {/* Pose Skeleton Overlay */}
-                    <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 10 }}>
-                      {/* Connections */}
-                      {skeletonJoints.connections.map((conn, i) => (
-                        <line
-                          key={i}
-                          x1={`${conn.from.x}%`}
-                          y1={`${conn.from.y}%`}
-                          x2={`${conn.to.x}%`}
-                          y2={`${conn.to.y}%`}
-                          stroke="rgba(255, 255, 255, 0.5)"
-                          strokeWidth="2"
-                        />
-                      ))}
-                      {/* Joints */}
-                      {skeletonJoints.joints.map((joint, i) => (
-                        <circle
-                          key={i}
-                          cx={`${joint.x}%`}
-                          cy={`${joint.y}%`}
-                          r="5"
-                          fill="#00d4ff"
-                          style={{
-                            filter: 'drop-shadow(0 0 4px rgba(0, 212, 255, 0.6))',
-                            animation: 'pulse-joint 2s infinite ease-in-out',
-                            animationDelay: `${i * 0.1}s`,
-                          }}
-                        />
-                      ))}
-                    </svg>
-
-                    {/* Done overlay */}
-                    {status === 'done' && (
-                      <div
-                        className="absolute inset-0 transition-opacity duration-400"
-                        style={{
-                          background: 'rgba(10, 10, 15, 0.3)',
-                          zIndex: 15,
-                        }}
-                      />
-                    )}
+                    <h3 className="mt-8 font-orbitron text-[#e0e0e0] tracking-[2px] animate-pulse">PROCESSING VIDEO</h3>
+                    <p className="mt-2 text-[#8888aa] text-sm text-center max-w-[250px]">
+                      Applying AI pose detection models to your workout...
+                    </p>
+                  </div>
+                )}
 
                     {/* Raw Video Feed Background */}
                     <video 
