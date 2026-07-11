@@ -28,7 +28,6 @@ export default function WorkoutPage() {
   const [liveFrame, setLiveFrame] = useState<string | null>(null);
   const [detectedExercise, setDetectedExercise] = useState<string | null>(null);
   const [webcamActive, setWebcamActive] = useState(false);
-  const [skeletonJoints] = useState(() => generateSkeletonJoints());
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const faultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -421,8 +420,8 @@ export default function WorkoutPage() {
       wsRef.current.send(JSON.stringify({ status: 'stop' }));
       wsRef.current.close();
     }
-    resetState();
-  }, [resetState]);
+    handleNewSession();
+  }, [handleNewSession]);
 
   const statusConfig = {
     idle: { color: '#555580', text: 'IDLE', dot: false },
@@ -664,46 +663,50 @@ export default function WorkoutPage() {
                   </div>
                 )}
 
-                {/* Active State - Video Feed with Skeleton */}
+                {/* Active State */}
                 {(isActive || status === 'done') && !processedVideoUrl && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: '#242730', zIndex: 10 }}>
-                    <div className="relative w-32 h-32 flex items-center justify-center">
-                      <div className="absolute inset-0 rounded-full" style={{
-                        background: '#242730',
-                        boxShadow: '8px 8px 16px #1b1d24, -8px -8px 16px #2d313c'
-                      }} />
-                      <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-[#00d4ff] border-r-[#7b2ff7]" style={{
-                        animation: 'spin-loader 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite'
-                      }} />
-                      <div className="absolute inset-4 rounded-full" style={{
-                        background: '#242730',
-                        boxShadow: 'inset 4px 4px 8px #1b1d24, inset -4px -4px 8px #2d313c'
-                      }} />
-                      <span className="relative z-10 text-3xl animate-pulse text-[#00d4ff]">&#128187;</span>
-                    </div>
-                    <h3 className="mt-8 font-orbitron text-[#e0e0e0] tracking-[2px] animate-pulse">PROCESSING VIDEO</h3>
-                    <p className="mt-2 text-[#8888aa] text-sm text-center max-w-[250px]">
-                      Applying AI pose detection models to your workout...
-                    </p>
-                  </div>
-                )}
+                  <div className="absolute inset-0">
+                    
+                    {/* Processing Overlay for Upload Mode */}
+                    {inputMode === 'upload' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: '#242730', zIndex: 10 }}>
+                        <div className="relative w-32 h-32 flex items-center justify-center">
+                          <div className="absolute inset-0 rounded-full" style={{
+                            background: '#242730',
+                            boxShadow: '8px 8px 16px #1b1d24, -8px -8px 16px #2d313c'
+                          }} />
+                          <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-[#00d4ff] border-r-[#7b2ff7]" style={{
+                            animation: 'spin-loader 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite'
+                          }} />
+                          <div className="absolute inset-4 rounded-full" style={{
+                            background: '#242730',
+                            boxShadow: 'inset 4px 4px 8px #1b1d24, inset -4px -4px 8px #2d313c'
+                          }} />
+                          <span className="relative z-10 text-3xl animate-pulse text-[#00d4ff]">&#128187;</span>
+                        </div>
+                        <h3 className="mt-8 font-orbitron text-[#e0e0e0] tracking-[2px] animate-pulse">PROCESSING VIDEO</h3>
+                        <p className="mt-2 text-[#8888aa] text-sm text-center max-w-[250px]">
+                          Applying AI pose detection models to your workout...
+                        </p>
+                      </div>
+                    )}
 
                     {/* Raw Video Feed Background */}
                     <video 
                       ref={videoRef} 
                       className="absolute inset-0 w-full h-full object-contain rounded-xl z-0" 
-                      style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none' }}
+                      style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none', opacity: inputMode === 'upload' ? 0 : 1 }}
                       muted 
                       playsInline 
                     />
 
                     {/* Live Frame Overlay (Websocket MJPEG) */}
-                    {liveFrame && status === 'active' && (
+                    {liveFrame && status === 'active' && inputMode === 'webcam' && (
                       <img
                         src={liveFrame}
                         alt="Live Processed Frame"
                         className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
-                        style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none' }}
+                        style={{ transform: 'scaleX(-1)' }}
                       />
                     )}
                   </div>
@@ -871,40 +874,4 @@ export default function WorkoutPage() {
       `}</style>
     </div>
   );
-}
-
-// Helper to generate mock skeleton joints
-function generateSkeletonJoints() {
-  const joints = [
-    { x: 50, y: 12 },   // head
-    { x: 50, y: 28 },   // neck
-    { x: 35, y: 32 },   // left shoulder
-    { x: 65, y: 32 },   // right shoulder
-    { x: 30, y: 50 },   // left elbow
-    { x: 70, y: 50 },   // right elbow
-    { x: 25, y: 68 },   // left wrist
-    { x: 75, y: 68 },   // right wrist
-    { x: 50, y: 55 },   // hip center
-    { x: 42, y: 75 },   // left knee
-    { x: 58, y: 75 },   // right knee
-    { x: 40, y: 92 },   // left ankle
-    { x: 60, y: 92 },   // right ankle
-  ];
-
-  const connections = [
-    { from: joints[0], to: joints[1] },
-    { from: joints[1], to: joints[2] },
-    { from: joints[1], to: joints[3] },
-    { from: joints[2], to: joints[4] },
-    { from: joints[3], to: joints[5] },
-    { from: joints[4], to: joints[6] },
-    { from: joints[5], to: joints[7] },
-    { from: joints[1], to: joints[8] },
-    { from: joints[8], to: joints[9] },
-    { from: joints[8], to: joints[10] },
-    { from: joints[9], to: joints[11] },
-    { from: joints[10], to: joints[12] },
-  ];
-
-  return { joints, connections };
 }
