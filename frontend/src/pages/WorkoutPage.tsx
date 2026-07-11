@@ -260,7 +260,7 @@ export default function WorkoutPage() {
             
             if (isProcessingFrame) {
               // Wait for backend to catch up before sending the next frame
-              setTimeout(sendFrame, 16);
+              requestAnimationFrame(sendFrame);
               return;
             }
 
@@ -268,7 +268,7 @@ export default function WorkoutPage() {
               const canvas = canvasRef.current;
               const video = videoRef.current;
               if (video.videoWidth > 0 && video.videoHeight > 0) {
-                const MAX_WIDTH = 640;
+                const MAX_WIDTH = 320;
                 let width = video.videoWidth;
                 let height = video.videoHeight;
                 
@@ -282,15 +282,15 @@ export default function WorkoutPage() {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                   ctx.drawImage(video, 0, 0, width, height);
-                  const b64 = canvas.toDataURL('image/jpeg', 0.5);
+                  const b64 = canvas.toDataURL('image/jpeg', 0.4);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
                 }
               }
             }
-            setTimeout(sendFrame, 33); // Attempt to send next frame for ~30fps
+            requestAnimationFrame(sendFrame);
           };
-          sendFrame();
+          requestAnimationFrame(sendFrame);
         };
 
         ws.onmessage = (event) => {

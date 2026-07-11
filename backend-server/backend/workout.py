@@ -672,7 +672,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                         break
                     else:
                         cv2.putText(image, "Detecting exercise... Please get in position", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-                        _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
+                        _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 30])
                         out_b64 = base64.b64encode(buffer).decode('utf-8')
                         await websocket.send_json({
                             "status": "processing",
@@ -767,7 +767,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                         last_fault = None
 
             # Send back HUD data and processed frame
-            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
+            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 30])
             out_b64 = base64.b64encode(buffer).decode('utf-8')
 
             await websocket.send_json({
