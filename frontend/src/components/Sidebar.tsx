@@ -12,15 +12,12 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen w-[260px] flex flex-col z-50"
-      style={{
-        background: 'linear-gradient(180deg, #0d0d1a, #11111f)',
-        borderRight: '1px solid rgba(0, 212, 255, 0.1)',
-        padding: '24px',
-      }}
+      className="fixed z-50 flex md:flex-col neo-card rounded-none md:rounded-r-2xl border-none 
+                 bottom-0 left-0 w-full h-[70px] flex-row items-center justify-around px-2
+                 md:top-0 md:h-screen md:w-[260px] md:items-stretch md:justify-start md:px-6 md:py-6"
     >
-      {/* Brand */}
-      <div className="mb-8">
+      {/* Brand (Desktop Only) */}
+      <div className="hidden md:block mb-8">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-2xl text-[#00d4ff]" style={{ textShadow: '0 0 12px rgba(0, 212, 255, 0.6)' }}>
             &#9889;
@@ -34,16 +31,16 @@ export default function Sidebar() {
         </p>
       </div>
 
-      {/* Divider */}
-      <div className="w-full h-px mb-6" style={{ background: 'rgba(0, 212, 255, 0.1)' }} />
+      {/* Divider (Desktop Only) */}
+      <div className="hidden md:block w-full h-px mb-6 bg-white/5 neo-inset" />
 
-      {/* User Info */}
-      <div className="mb-6">
+      {/* User Info (Desktop Only) */}
+      <div className="hidden md:block mb-6">
         <p className="font-inter text-xs text-[#8888aa] truncate">{user?.email || 'user@email.com'}</p>
         <div className="flex items-center gap-2 mt-1">
           <div
             className="w-2 h-2 rounded-full bg-[#00ff88]"
-            style={{ animation: 'pulse-dot 2s infinite' }}
+            style={{ animation: 'pulse-dot 2s infinite', boxShadow: '0 0 8px rgba(0, 255, 136, 0.6)' }}
           />
           <span className="font-inter text-[11px] font-semibold text-[#00ff88] tracking-[1.5px] uppercase">
             ACTIVE MEMBER
@@ -51,52 +48,56 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="w-full h-px mb-4" style={{ background: 'rgba(0, 212, 255, 0.1)' }} />
+      {/* Divider (Desktop Only) */}
+      <div className="hidden md:block w-full h-px mb-4 bg-white/5 neo-inset" />
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-1 flex-1">
+      <nav className="flex flex-row md:flex-col gap-2 md:gap-4 w-full md:flex-1 justify-around md:justify-start">
         <button
           onClick={() => navigate('/workout')}
-          className={`sidebar-nav-item ${isActive('/workout') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
         >
-          <span className="text-lg">&#127947;</span>
-          <span>Workout</span>
+          <span className="text-xl md:text-lg">&#127947;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">WORKOUT</span>
         </button>
 
         <button
           onClick={() => navigate('/history')}
-          className={`sidebar-nav-item ${isActive('/history') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/history') ? 'active' : ''}`}
         >
-          <span className="text-lg">&#128202;</span>
-          <span>History</span>
+          <span className="text-xl md:text-lg">&#128202;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HISTORY</span>
         </button>
 
-        {/* Divider */}
-        <div className="w-full h-px my-4" style={{ background: 'rgba(0, 212, 255, 0.1)' }} />
-
-        {/* Mute Toggle */}
+        {/* Mute Toggle (Icon only on mobile, full text on desktop) */}
         <button
           onClick={toggleMute}
-          className="sidebar-nav-item hover:bg-white/[0.03]"
+          className="sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px]"
         >
-          <span className="text-lg">{isMuted ? '🔇' : '🔊'}</span>
-          <span>{isMuted ? 'UNMUTE VOICE' : 'MUTE VOICE'}</span>
+          <span className="text-xl md:text-lg relative">
+            {isMuted ? '🔇' : '🔊'}
+            {isMuted && (
+              <span className="md:hidden absolute top-0 right-0 w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
+            )}
+          </span>
+          <span className="hidden md:inline font-bold tracking-wider text-[10px] md:text-sm">
+            {isMuted ? 'UNMUTE' : 'MUTE'}
+          </span>
           {isMuted && (
-            <span className="w-2 h-2 rounded-full bg-[#ff4d6d] ml-auto" />
+            <span className="hidden md:block w-2 h-2 rounded-full bg-[#ff4d6d] ml-auto shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
           )}
         </button>
 
-        {/* Divider */}
-        <div className="w-full h-px my-4" style={{ background: 'rgba(0, 212, 255, 0.1)' }} />
+        {/* Divider (Desktop Only) */}
+        <div className="hidden md:block w-full h-px my-2 bg-white/5 neo-inset" />
 
         {/* Logout */}
         <button
           onClick={logout}
-          className="sidebar-nav-item text-[#ff4d6d] hover:bg-[rgba(255,77,109,0.1)]"
+          className="sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] text-[#ff4d6d] hover:text-[#ff2a55]"
         >
-          <span className="text-lg">&#128682;</span>
-          <span className="font-inter text-[11px] font-semibold tracking-[1.5px] uppercase">LOGOUT</span>
+          <span className="text-xl md:text-lg">&#128682;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">LOGOUT</span>
         </button>
       </nav>
     </aside>

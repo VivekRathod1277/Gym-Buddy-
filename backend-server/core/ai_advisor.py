@@ -19,17 +19,17 @@ load_dotenv()
 
 class AIAdvisor:
     def __init__(self):
-        api_key = os.getenv("NVIDIA_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("NVIDIA_API_KEY")
         if not api_key:
-            print("WARNING: NVIDIA_API_KEY not found in .env file.")
+            print("WARNING: API Key not found in .env file.")
             self.client = None
             return
 
         self.client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key=api_key,
         )
-        self.model = "deepseek-ai/deepseek-v4-pro"
+        self.model = "gemini-2.5-flash"
         self.is_analyzing = False
         self.last_suggestion = ""
 
@@ -107,7 +107,6 @@ class AIAdvisor:
                 temperature=0.7,
                 top_p=0.95,
                 max_tokens=128,
-                extra_body={"chat_template_kwargs": {"thinking": False}},
                 stream=False,
                 timeout=5.0,
             )
@@ -145,7 +144,6 @@ class AIAdvisor:
                 temperature=0.2,
                 top_p=0.9,
                 max_tokens=10,
-                extra_body={"chat_template_kwargs": {"thinking": False}},
                 stream=False,
                 timeout=5.0,
             )

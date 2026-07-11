@@ -8,9 +8,7 @@ import api from '@/lib/api';
 import type { AnalysisStatus, InputMode, ExerciseType } from '@/types';
 import Sidebar from '@/components/Sidebar';
 import SessionSummaryModal from '@/components/SessionSummaryModal';
-
-const WS_URL = import.meta.env.VITE_WS_URL || 'wss://gym-buddy-rkqw.onrender.com';
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://gym-buddy-rkqw.onrender.com';
+import { WS_URL, API_BASE } from '@/lib/api';
 
 export default function WorkoutPage() {
   const [inputMode, setInputMode] = useState<InputMode>('upload');
@@ -443,23 +441,23 @@ export default function WorkoutPage() {
     <div className="min-h-screen flex" style={{ background: '#0a0a0f' }}>
       <Sidebar />
 
-      <main className="flex-1 ml-[260px] flex flex-col min-h-screen">
+      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-screen">
         {/* Page Header */}
         <div
-          className="px-8 py-6"
+          className="px-4 md:px-8 py-4 md:py-6"
           style={{ borderBottom: '1px solid rgba(0, 212, 255, 0.15)' }}
         >
-          <h1 className="font-orbitron font-bold text-[22px] tracking-[3px] uppercase text-[#e0e0e0]">
+          <h1 className="font-orbitron font-bold text-lg md:text-[22px] tracking-[3px] uppercase text-[#e0e0e0]">
             WORKOUT ANALYSIS
           </h1>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-8 flex flex-col gap-6 overflow-hidden">
+        <div className="flex-1 p-4 md:p-8 flex flex-col gap-4 md:gap-6 overflow-y-auto md:overflow-hidden">
           {/* Two Column Grid */}
-          <div className="flex gap-6 flex-1 min-h-0">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6 flex-none md:flex-1 min-h-0">
             {/* Configuration Panel */}
-            <div className="glass-card p-7 flex flex-col" style={{ width: '40%', minWidth: '320px' }}>
+            <div className="neo-card p-5 md:p-7 flex flex-col w-full md:w-[40%] md:min-w-[320px]">
               <div className="flex items-center gap-2 mb-6">
                 <span className="text-lg">&#9881;</span>
                 <h2 className="font-orbitron font-bold text-base tracking-[2px] uppercase text-[#e0e0e0]">
@@ -592,7 +590,7 @@ export default function WorkoutPage() {
             <canvas ref={canvasRef} className="hidden" />
 
             {/* Live Feed Panel */}
-            <div className="glass-card flex flex-col overflow-hidden flex-1" style={{ padding: 0 }}>
+            <div className="neo-card flex flex-col overflow-hidden flex-1 min-h-[300px] md:min-h-0" style={{ padding: 0 }}>
               {/* Video Area */}
               <div
                 className="relative flex-1 bg-black overflow-hidden"
@@ -801,9 +799,9 @@ export default function WorkoutPage() {
           </div>
 
           {/* Stats Row */}
-          <div className="flex gap-6">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-4 md:mt-0 flex-none">
             {/* Rep Counter */}
-            <div className="glass-card flex-1 p-5 flex flex-col">
+            <div className="neo-card flex-1 p-4 md:p-5 flex flex-col">
               <div className="flex items-end gap-2">
                 <span
                   className="font-orbitron font-bold text-5xl text-[#e0e0e0] transition-all"
@@ -822,7 +820,7 @@ export default function WorkoutPage() {
             </div>
 
             {/* Joint Angle */}
-            <div className="glass-card flex-1 p-5 flex flex-col">
+            <div className="neo-card flex-1 p-4 md:p-5 flex flex-col">
               <div className="flex items-end gap-1">
                 <span className="font-orbitron font-bold text-5xl text-[#00d4ff] transition-all duration-100">
                   {angle}
@@ -835,7 +833,7 @@ export default function WorkoutPage() {
             </div>
 
             {/* Status */}
-            <div className="glass-card flex-1 p-5 flex flex-col">
+            <div className="neo-card flex-1 p-4 md:p-5 flex flex-col">
               <div className="flex items-center gap-2">
                 {currentStatus.dot && (
                   <div
