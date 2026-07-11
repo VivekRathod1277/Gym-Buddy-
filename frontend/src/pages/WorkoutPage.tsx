@@ -482,24 +482,6 @@ export default function WorkoutPage() {
                 </select>
               </div>
 
-              {/* Exercise Override */}
-              <div className="mb-5">
-                <label className="block font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mb-2">
-                  EXERCISE OVERRIDE
-                </label>
-                <select
-                  value={exerciseType}
-                  onChange={e => setExerciseType(e.target.value as ExerciseType)}
-                  className="input-field cursor-pointer appearance-none"
-                  disabled={isActive || isInitializing}
-                >
-                  <option value="auto">auto (detect)</option>
-                  <option value="pushup">Push-up</option>
-                  <option value="pullup">Pull-up</option>
-                  <option value="squat">Squat</option>
-                  <option value="bicep_curl">Bicep Curl</option>
-                </select>
-              </div>
 
               {/* File Uploader */}
               {inputMode === 'upload' && (

@@ -1,18 +1,19 @@
-import os
-import requests
-import json
-from dotenv import load_dotenv
+import cv2
+import asyncio
+from core.ai_advisor import AIAdvisor
 
-load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
+async def main():
+    video_path = "C:/Users/ratho/Desktop/Projects - Msc/Gym Posture/chest press.mp4"
+    cap = cv2.VideoCapture(video_path)
+    ret, frame = cap.read()
+    if not ret:
+        print("Failed to read video")
+        return
+    
+    advisor = AIAdvisor()
+    print("Sending frame to AIAdvisor...")
+    detected = await asyncio.to_thread(advisor.detect_exercise, frame)
+    print(f"Detected exercise: {detected}")
 
-url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-headers = {"Content-Type": "application/json"}
-payload = {
-    "contents": [{
-        "parts": [{"text": "Hello, what is your name?"}]
-    }]
-}
-res = requests.post(url, headers=headers, json=payload)
-print(res.status_code)
-print(res.json())
+if __name__ == "__main__":
+    asyncio.run(main())

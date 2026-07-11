@@ -1,0 +1,29 @@
+{
+  "exercise_name": "Chest Press",
+  "target_joints": {
+    "primary": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+    "fault_1": []
+  },
+  "phases": {
+    "start": {
+      "angle": 150,
+      "threshold": 20,
+      "type": "greater_than"
+    },
+    "end": {
+      "angle": 90,
+      "threshold": 20,
+      "type": "less_than"
+    }
+  },
+  "form_faults": [
+    {
+      "name": "Elbow_Flare",
+      "type": "angle_range",
+      "joints": ["RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"],
+      "max_angle": 170,
+      "feedback_message": "Do not flare your elbows too wide. Keep them tucked slightly.",
+      "view": "front"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import threading
 from typing import List, Dict
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form, status, WebSocket, WebSocketDisconnect
 import asyncio
+import time
 from fastapi.responses import FileResponse
 import mediapipe as mp
 
@@ -533,6 +534,8 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
             if processed_count % SKIP_FACTOR != 0:
                 continue
 
+            frame_start_time = time.time()
+
             ret, frame = cap.retrieve()
             if not ret:
                 break
@@ -598,7 +601,13 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
                 "progress": round((processed_count / total_frames) * 100, 1)
             })
 
-            await asyncio.sleep(0)  # yield to event loop
+            # Pace the stream to play at roughly normal 1x speed on the frontend
+            elapsed = time.time() - frame_start_time
+            sleep_time = (frame_delay * SKIP_FACTOR) - elapsed
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+            else:
+                await asyncio.sleep(0)  # yield to event loop
 
         cap.release()
         out.release()

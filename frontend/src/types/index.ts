@@ -18,7 +18,7 @@ export type AnalysisStatus = 'idle' | 'scanning' | 'active' | 'done';
 
 export type InputMode = 'upload' | 'webcam';
 
-export type ExerciseType = 'auto' | 'pushup' | 'pullup' | 'squat' | 'bicep_curl';
+export type ExerciseType = 'auto' | 'pushup' | 'pullup' | 'squat' | 'bicep_curl' | 'chest_press';
 
 export interface ExerciseConfig {
   name: string;
@@ -65,18 +65,34 @@ export const EXERCISE_CONFIGS: Record<ExerciseType, ExerciseConfig> = {
   },
   bicep_curl: {
     name: 'Bicep Curl',
-    faults: ['Elbow_Drift', 'Shoulder_Swing'],
+    faults: ['Shoulder_Swing', 'Incomplete_ROM'],
     aiTips: [
-      'Keep your elbows pinned at your sides throughout the movement.',
-      'Control the weight on the way down — resist the pull of gravity.',
-      'Avoid swinging your body to lift the weight; use only your biceps.',
+      'Keep your elbows pinned to your sides throughout the movement.',
+      'Squeeze your biceps at the top of the curl.',
+      'Control the weight on the way down - do not just drop it.',
     ],
   },
+  chest_press: {
+    name: 'Chest Press',
+    faults: ['Elbow_Flare'],
+    aiTips: [
+      'Keep your elbows tucked at a 45-degree angle.',
+      'Squeeze your chest at the top of the movement.',
+      'Lower the weight with control.'
+    ]
+  }
 };
 
 export const EXERCISE_COLORS: Record<string, string> = {
-  'Push-up': '#00d4ff',
-  'Pull-up': '#7b2ff7',
-  'Squat': '#ffcc00',
-  'Bicep Curl': '#00ff88',
+  auto: '#00d4ff',
+  pushup: '#ff4d6d',
+  pullup: '#7b2ff7',
+  squat: '#00ff88',
+  bicep_curl: '#ffaa00',
+  chest_press: '#ff00aa',
+  'Pushup': '#ff4d6d',
+  'Pullup': '#7b2ff7',
+  'Squat': '#00ff88',
+  'Bicep Curl': '#ffaa00',
+  'Chest Press': '#ff00aa',
 };
