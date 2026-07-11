@@ -642,11 +642,12 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 if "frame" in data:
                     frame = decode_base64_frame(data["frame"])
                     
-                    image = frame.copy()
                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     rgb_image.flags.writeable = False
                     results = pose.process(rgb_image)
                     rgb_image.flags.writeable = True
+
+                    image = np.zeros((frame.shape[0], frame.shape[1], 3), dtype=np.uint8)
 
                     if results.pose_landmarks:
                         mp_drawing.draw_landmarks(
@@ -672,7 +673,11 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                         break
                     else:
                         cv2.putText(image, "Detecting exercise... Please get in position", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-                        _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 30])
+                        
+                        b, g, r = cv2.split(image)
+                        alpha = np.where((b == 0) & (g == 0) & (r == 0), 0, 255).astype(np.uint8)
+                        image_bgra = cv2.merge((b, g, r, alpha))
+                        _, buffer = cv2.imencode('.webp', image_bgra, [cv2.IMWRITE_WEBP_QUALITY, 50])
                         out_b64 = base64.b64encode(buffer).decode('utf-8')
                         await websocket.send_json({
                             "status": "processing",
@@ -725,11 +730,12 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 continue
 
             processed_count += 1
-            image = frame.copy()
             rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             rgb_image.flags.writeable = False
             results = pose.process(rgb_image)
             rgb_image.flags.writeable = True
+
+            image = np.zeros((frame.shape[0], frame.shape[1], 3), dtype=np.uint8)
 
             if results.pose_landmarks:
                 mp_drawing.draw_landmarks(
@@ -766,8 +772,11 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                     elif not display_fault:
                         last_fault = None
 
-            # Send back HUD data and processed frame
-            _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 30])
+            # Send back HUD data and transparent processed frame
+            b, g, r = cv2.split(image)
+            alpha = np.where((b == 0) & (g == 0) & (r == 0), 0, 255).astype(np.uint8)
+            image_bgra = cv2.merge((b, g, r, alpha))
+            _, buffer = cv2.imencode('.webp', image_bgra, [cv2.IMWRITE_WEBP_QUALITY, 50])
             out_b64 = base64.b64encode(buffer).decode('utf-8')
 
             await websocket.send_json({

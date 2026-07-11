@@ -298,7 +298,7 @@ export default function WorkoutPage() {
           const data = JSON.parse(event.data);
           
           if (data.status === 'processing') {
-            if (data.frame) setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
+            if (data.frame) setLiveFrame(`data:image/webp;base64,${data.frame}`);
             if (data.reps !== undefined) {
                setReps(prev => {
                   if (data.reps > prev) speak(`Rep ${data.reps}`);
@@ -733,12 +733,21 @@ export default function WorkoutPage() {
                       />
                     )}
 
+                    {/* Raw Video Feed Background */}
+                    <video 
+                      ref={videoRef} 
+                      className="absolute inset-0 w-full h-full object-contain rounded-xl z-0" 
+                      style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none' }}
+                      muted 
+                      playsInline 
+                    />
+
                     {/* Live Frame Overlay (Websocket MJPEG) */}
                     {liveFrame && status === 'active' && (
                       <img
                         src={liveFrame}
                         alt="Live Processed Frame"
-                        className="absolute inset-0 w-full h-full object-contain bg-black z-10"
+                        className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
                         style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none' }}
                       />
                     )}
