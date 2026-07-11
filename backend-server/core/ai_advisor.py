@@ -119,10 +119,10 @@ class AIAdvisor:
     def detect_exercise(self, frame) -> str:
         """
         Uses DeepSeek-V4-Pro vision to identify the exercise in the first frame.
-        Falls back to 'pushup' on any error.
+        Falls back to 'unknown' on any error or if unsure.
         """
         if not self.client:
-            return "pushup"
+            return "unknown"
 
         try:
             b64 = self._frame_to_base64(frame)
@@ -130,7 +130,7 @@ class AIAdvisor:
             prompt = (
                 "Look at this gym image. Which exercise is the person performing or about to perform? "
                 "Respond with exactly ONE word from this list: pushup, pullup, squat, bicep_curl. "
-                "If unsure, respond: pushup"
+                "If no person is clearly visible or they are not in a position to start any of these exercises, respond: unknown"
             )
 
             response = self.client.chat.completions.create(
@@ -151,8 +151,8 @@ class AIAdvisor:
                 if ex in exercise:
                     return ex
 
-            return "pushup"
+            return "unknown"
 
         except Exception as e:
             print(f"[AIAdvisor] Exercise detection error: {e}")
-            return "pushup"
+            return "unknown"

@@ -726,6 +726,7 @@ export default function WorkoutPage() {
                         src={liveFrame}
                         alt="Live Processed Frame"
                         className="absolute inset-0 w-full h-full object-contain bg-black z-10"
+                        style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none' }}
                       />
                     )}
                   </div>

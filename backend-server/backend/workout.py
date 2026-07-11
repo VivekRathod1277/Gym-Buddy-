@@ -620,18 +620,38 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
     
-    # Wait for the first frame to auto-detect if auto
     if exercise_file in ["auto", "auto.json"]:
         try:
-            data = await websocket.receive_json()
-            if "frame" in data:
-                frame = decode_base64_frame(data["frame"])
-                print("[WS] Auto-detecting exercise from first frame...", flush=True)
-                detected = await asyncio.to_thread(advisor.detect_exercise, frame)
-                print(f"[WS] Detected exercise: {detected}", flush=True)
-                exercise_file = f"{detected}.json"
-            else:
-                exercise_file = "pushup.json"
+            detected = None
+            while not detected or detected in ["unknown", "none", ""]:
+                data = await websocket.receive_json()
+                if "status" in data and data["status"] == "stop":
+                    await websocket.close()
+                    return
+                if "frame" in data:
+                    frame = decode_base64_frame(data["frame"])
+                    print("[WS] Auto-detecting exercise from frame...", flush=True)
+                    detected = await asyncio.to_thread(advisor.detect_exercise, frame)
+                    if detected and detected.lower() not in ["unknown", "none", "", "auto"]:
+                        print(f"[WS] Detected exercise: {detected}", flush=True)
+                        exercise_file = f"{detected}.json"
+                        break
+                    else:
+                        import cv2
+                        import base64
+                        image = frame.copy()
+                        cv2.putText(image, "Detecting exercise... Please get in position", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+                        _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
+                        out_b64 = base64.b64encode(buffer).decode('utf-8')
+                        await websocket.send_json({
+                            "status": "processing",
+                            "frame": out_b64,
+                            "ai_tip": "Detecting exercise... Please get in position.",
+                            "exercise": "auto",
+                            "reps": 0,
+                            "angle": 0,
+                            "fault": None
+                        })
         except Exception as e:
             print(f"[WS] Auto-detect failed: {e}", flush=True)
             exercise_file = "pushup.json"
