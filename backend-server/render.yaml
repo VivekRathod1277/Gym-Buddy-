@@ -8,3 +8,7 @@ services:
     envVars:
       - key: PORT
         value: 8000
+      - key: JWT_SECRET_KEY
+        generateValue: true   # Render auto-generates a strong secret on first deploy
+      - key: NVIDIA_API_KEY
+        sync: false           # Must be set manually in the Render dashboard

@@ -38,3 +38,13 @@ PENDING:
   - Replaces MediaPipe's default yellow-dot draw_landmarks in every pipeline
   - display_fault = None initialiser added to process_video_task so the
     skeleton has a valid value from frame 1
+
+[2026-07-15 15:12] RENDER DEPLOY FIX — JWT_SECRET_KEY startup crash: COMPLETE
+  - Root cause: render.yaml only declared PORT; JWT_SECRET_KEY was missing from
+    Render's environment so the server exited immediately on startup
+  - Fix: updated backend-server/render.yaml to declare:
+      • JWT_SECRET_KEY with generateValue: true  (Render auto-generates a strong
+        secret on first deploy — never hardcoded in git)
+      • NVIDIA_API_KEY with sync: false  (must be pasted manually in Render
+        dashboard — keeps the real key out of the repo)
+  - Push this commit and Render will redeploy with the env vars present
