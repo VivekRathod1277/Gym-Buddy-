@@ -1,12 +1,24 @@
 import os
+import sys
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from jwt.exceptions import InvalidTokenError
 from backend.schemas import TokenData
 
-# Use a default secret key for convenience or pull from environment
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-gym-buddy-key-123456789")
+# Raise a hard error at startup if JWT_SECRET_KEY is not configured.
+# A hardcoded fallback is a security vulnerability — never use one in production.
+_secret = os.getenv("JWT_SECRET_KEY")
+if not _secret:
+    print(
+        "FATAL: JWT_SECRET_KEY environment variable is not set. "
+        "Add it to your .env file (see .env.example). Exiting.",
+        file=sys.stderr,
+        flush=True,
+    )
+    sys.exit(1)
+
+SECRET_KEY = _secret
 ALGORITHM = "HS256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")

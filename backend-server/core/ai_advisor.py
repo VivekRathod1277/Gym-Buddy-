@@ -1,8 +1,13 @@
 """
-AI Advisor — NVIDIA NIM (DeepSeek-V4-Pro)
-==========================================
-Replaces Google Gemini with NVIDIA's OpenAI-compatible NIM API.
+AI Advisor — NVIDIA NIM (DeepSeek-V4-Pro via OpenAI-compatible endpoint)
+=========================================================================
+Sends exercise frames to NVIDIA NIM for real-time posture coaching tips
+and auto-detection of exercise type.
 Runs analysis in a background thread to avoid blocking the main loop.
+
+Provider:  https://integrate.api.nvidia.com/v1
+Model:     deepseek-ai/deepseek-v4-pro
+Env var:   NVIDIA_API_KEY  (see .env.example)
 """
 
 import os

@@ -1,1 +1,26 @@
-Progress log started.
+﻿Progress log started.
+
+[2026-07-15 11:08] PHASE 0 — Security Hardening (Steps 1-3): COMPLETE
+  - Step 1: Created SECURITY_TODO.md documenting SSH key exposure and git history purge instructions
+  - Step 2: Removed hardcoded JWT secret fallback from dependencies.py; server now exits at startup if JWT_SECRET_KEY is unset
+  - Step 3: Confirmed .env was committed in commits 4a74671 and dd3da65; documented in SECURITY_TODO.md with rotation instructions
+  - Created backend-server/.env.example with placeholder values for all required env vars
+  - Added JWT_SECRET_KEY to backend-server/.env (local only, gitignored)
+
+[2026-07-15 11:08] PHASE 1 — Low-Light Fix (Steps 4-17): COMPLETE (core implementation)
+  - Steps 4-9: Created backend-server/core/frame_enhancer.py
+      CLAHE on LAB L-channel, adaptive gamma, bilateral denoising, brightness classifier
+  - Step 10: Added _make_pose() factory in workout.py — single config source for all 3 pipelines
+  - Step 11: Low-light frames use reduced tracking_confidence (0.35 vs 0.5)
+  - Step 12: Temporal smoothing in live_stream_ws — holds last landmarks for up to 5 frames on detection drop
+  - Step 13: enhance_if_needed() wired into all 3 pipelines (process_video_task, stream_video_ws, live_stream_ws)
+  - Step 14: getUserMedia upgraded with explicit 1280x720 @ 30fps constraints
+  - Step 17: pose_confidence added to WS JSON payload; frontend shows amber warning banner after 1.2s of low confidence
+  - Step 26: Fixed ai_advisor.py docstring (removed 'Replaces Google Gemini' — code correctly uses NVIDIA NIM throughout)
+
+PENDING:
+  - Step 15: backend-server/tools/synthetic_lowlight.py (test data generator)
+  - Step 16: backend-server/test_lowlight_detection.py (benchmark script)
+  - Steps 18-25: Phase 2 — Core Workflow Gaps
+  - Steps 27-31: Phase 3 — Diet Tracking
+  - Steps 32-36: Phase 4 — Progressive Overload

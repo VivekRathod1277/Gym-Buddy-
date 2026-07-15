@@ -28,6 +28,8 @@ export default function WorkoutPage() {
   const [liveFrame, setLiveFrame] = useState<string | null>(null);
   const [detectedExercise, setDetectedExercise] = useState<string | null>(null);
   const [webcamActive, setWebcamActive] = useState(false);
+  const [lowPoseConfidence, setLowPoseConfidence] = useState(false);
+  const lowConfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const faultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -211,7 +213,16 @@ export default function WorkoutPage() {
         // Webcam Mode
         let stream;
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          // Step 14: request explicit resolution + framerate so the backend
+          // receives a usable frame even in dim conditions
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 },
+            },
+            audio: false,
+          });
         } catch (err) {
           throw new Error('Camera access denied or not available.');
         }
@@ -318,6 +329,21 @@ export default function WorkoutPage() {
                    if (prev !== data.fault) triggerFault(data.fault);
                    return data.fault;
                });
+            }
+            // Step 17: track pose confidence and show warning on sustained low signal
+            if (data.pose_confidence !== undefined) {
+              const isLow = data.pose_confidence < 0.4;
+              if (isLow) {
+                if (lowConfTimerRef.current === null) {
+                  lowConfTimerRef.current = setTimeout(() => setLowPoseConfidence(true), 1200);
+                }
+              } else {
+                if (lowConfTimerRef.current) {
+                  clearTimeout(lowConfTimerRef.current);
+                  lowConfTimerRef.current = null;
+                }
+                setLowPoseConfidence(false);
+              }
             }
           } else if (data.status === 'completed') {
             ws.close();
@@ -690,6 +716,17 @@ export default function WorkoutPage() {
                         alt="Live Processed Frame"
                         className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
                       />
+                    )}
+
+                    {/* Step 17: Low-light / low-confidence warning */}
+                    {lowPoseConfidence && status === 'active' && (
+                      <div
+                        className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+                        style={{ background: 'rgba(255, 190, 0, 0.18)', border: '1px solid rgba(255, 190, 0, 0.5)', color: '#ffe066', backdropFilter: 'blur(8px)' }}
+                      >
+                        <span>⚠️</span>
+                        <span>Having trouble seeing you — try adjusting the light or stepping back</span>
+                      </div>
                     )}
                   </div>
                 )}

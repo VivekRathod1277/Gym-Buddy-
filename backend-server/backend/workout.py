@@ -20,6 +20,28 @@ from backend.dependencies import get_current_user
 from core.ai_advisor import AIAdvisor
 from core.physics_engine import PhysicsEngine
 from core.ml_model import ExerciseClassifier
+from core.frame_enhancer import enhance_if_needed, LOW_LIGHT_TRACKING_CONFIDENCE
+
+# ─── Pose factory (Step 10) ───────────────────────────────────────────────────
+# Single source of truth for MediaPipe Pose config so thresholds are never
+# scattered across three separate pipeline functions.
+POSE_DETECTION_CONFIDENCE = 0.5
+POSE_TRACKING_CONFIDENCE = 0.5
+
+def _make_pose(low_light: bool = False):
+    """Return a configured mp.solutions.pose.Pose instance.
+    For low-light frames a reduced tracking_confidence is used (Step 11)
+    so that noisy landmark data doesn't immediately drop the tracked skeleton.
+    """
+    tracking_conf = (
+        LOW_LIGHT_TRACKING_CONFIDENCE if low_light
+        else POSE_TRACKING_CONFIDENCE
+    )
+    return mp.solutions.pose.Pose(
+        min_detection_confidence=POSE_DETECTION_CONFIDENCE,
+        min_tracking_confidence=tracking_conf,
+    )
+# ─────────────────────────────────────────────────────────────────────────────
 
 router = APIRouter(prefix="/api/workout", tags=["workout"])
 
@@ -251,7 +273,7 @@ def process_video_task(
     classifier = ExerciseClassifier()
 
     mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    pose = _make_pose(low_light=False)  # Step 10: shared factory
     mp_drawing = mp.solutions.drawing_utils
 
     processed_count = 0
@@ -270,11 +292,25 @@ def process_video_task(
             # Update progress ratio
             tasks[task_id]["progress"] = round((processed_count / total_frames) * 100, 2)
 
-            image = frame.copy()
-            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Step 13: enhance before pose estimation
+            enhanced_frame, frame_class = enhance_if_needed(frame)
+            if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=True)
+                pose._low_light_mode = True
+            elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=False)
+
+            image = enhanced_frame.copy()
+            rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
             rgb_image.flags.writeable = False
             results = pose.process(rgb_image)
             rgb_image.flags.writeable = True
+            pose_confidence = (
+                results.pose_landmarks.landmark[0].visibility
+                if results.pose_landmarks else 0.0
+            )
 
             if results.pose_landmarks:
                 mp_drawing.draw_landmarks(
@@ -504,7 +540,7 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
     try:
         print("[WS] Initializing mediapipe...", flush=True)
         mp_pose = mp.solutions.pose
-        pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        pose = _make_pose(low_light=False)  # Step 10
         mp_drawing = mp.solutions.drawing_utils
         print("[WS] Mediapipe initialized", flush=True)
 
@@ -540,8 +576,18 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
             if not ret:
                 break
 
-            image = frame.copy()
-            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Step 13: enhance before pose estimation
+            enhanced_frame, frame_class = enhance_if_needed(frame)
+            if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=True)
+                pose._low_light_mode = True
+            elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=False)
+
+            image = enhanced_frame.copy()
+            rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
             rgb_image.flags.writeable = False
             results = pose.process(rgb_image)
             rgb_image.flags.writeable = True
@@ -687,8 +733,12 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
     
     mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    pose = _make_pose(low_light=False)  # Step 10
     mp_drawing = mp.solutions.drawing_utils
+    # Step 12: temporal smoothing — hold last confident landmarks
+    _last_landmarks = None
+    _lost_frames = 0
+    _HOLD_FRAMES = 5  # hold position for up to 5 missed frames
 
     if exercise_file in ["auto", "auto.json"]:
         try:
@@ -799,10 +849,37 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 continue
 
             processed_count += 1
-            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Step 13: enhance before pose estimation
+            enhanced_frame, frame_class = enhance_if_needed(frame)
+            if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=True)
+                pose._low_light_mode = True
+            elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=False)
+
+            rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
             rgb_image.flags.writeable = False
             results = pose.process(rgb_image)
             rgb_image.flags.writeable = True
+
+            # Step 12: temporal smoothing — hold last good skeleton on missed frames
+            if results.pose_landmarks:
+                _last_landmarks = results.pose_landmarks
+                _lost_frames = 0
+            elif _last_landmarks is not None and _lost_frames < _HOLD_FRAMES:
+                _lost_frames += 1
+                # Patch results with last known landmarks so downstream code runs
+                results.pose_landmarks = _last_landmarks
+            else:
+                _lost_frames += 1
+
+            pose_confidence = (
+                results.pose_landmarks.landmark[0].visibility
+                if results.pose_landmarks else 0.0
+            )
 
             # Draw skeleton on the actual frame (not a black canvas)
             image = frame.copy()
@@ -849,6 +926,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
             _, buffer = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 50])
             out_b64 = base64.b64encode(buffer).decode('utf-8')
 
+            # Step 17: include pose_confidence so frontend can warn on low visibility
             await websocket.send_json({
                 "status": "processing",
                 "frame": out_b64,
@@ -856,7 +934,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 "angle": int(angle) if angle else 0,
                 "fault": display_fault,
                 "ai_tip": tip_text,
-                "exercise": exercise_name
+                "exercise": exercise_name,
+                "pose_confidence": round(float(pose_confidence), 3)
             })
             
             await asyncio.sleep(0)
