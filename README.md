@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🏋️ Gym Buddy — AI Fitness Trainer
 
@@ -164,9 +164,6 @@ cd backend-server
 
 # Install Python dependencies
 pip install -r requirements.txt
-
-# Create your environment file and add your NVIDIA_API_KEY
-echo "NVIDIA_API_KEY=your_key_here" > .env
 ```
 
 **Train the ML Model** (required on first run):
@@ -216,17 +213,6 @@ python main.py "my_squat.mp4" squat.json
 |---|---|
 | `a` | Trigger AI analysis on current frame |
 | `q` | Quit and export session JSON |
-
----
-
-## 🔑 Environment Variables
-
-`backend-server/.env`:
-
-```env
-# NVIDIA NIM API Key — https://build.nvidia.com/
-NVIDIA_API_KEY=your_nvidia_nim_api_key_here
-```
 
 ---
 
