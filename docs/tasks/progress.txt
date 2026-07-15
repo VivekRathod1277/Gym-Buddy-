@@ -18,9 +18,10 @@
   - Step 17: pose_confidence added to WS JSON payload; frontend shows amber warning banner after 1.2s of low confidence
   - Step 26: Fixed ai_advisor.py docstring (removed 'Replaces Google Gemini' — code correctly uses NVIDIA NIM throughout)
 
+  - Step 15 & 16: Created synthetic_lowlight.py and test_lowlight_detection.py. Benchmark confirmed massive improvement on 25% brightness frames (0.00% -> 96.10% success rate).
+
 PENDING:
-  - Step 15: backend-server/tools/synthetic_lowlight.py (test data generator)
-  - Step 16: backend-server/test_lowlight_detection.py (benchmark script)
   - Steps 18-25: Phase 2 — Core Workflow Gaps
   - Steps 27-31: Phase 3 — Diet Tracking
   - Steps 32-36: Phase 4 — Progressive Overload
+
