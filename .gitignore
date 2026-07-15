@@ -1,6 +1,10 @@
 # Secrets & Environment
 .env
 
+# SSH Keys & Deployment Credentials
+*.pem
+*.ppk
+
 # Local SQLite Database
 gym_ai.db
 
