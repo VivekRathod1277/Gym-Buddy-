@@ -1,4 +1,4 @@
-﻿Progress log started.
+Progress log started.
 
 [2026-07-15 11:08] PHASE 0 — Security Hardening (Steps 1-3): COMPLETE
   - Step 1: Created SECURITY_TODO.md documenting SSH key exposure and git history purge instructions
@@ -25,3 +25,16 @@ PENDING:
   - Steps 27-31: Phase 3 — Diet Tracking
   - Steps 32-36: Phase 4 — Progressive Overload
 
+[2026-07-15 14:59] SKELETON OVERLAY — Premium AR Skeleton: COMPLETE
+  - Added draw_skeleton_overlay() in backend-server/backend/workout.py
+  - Draws thick white bone connections (with soft glow halo) + large filled
+    white joint circles at all key anatomical landmarks (shoulders, elbows,
+    wrists, hips, knees, ankles, feet)
+  - Bones turn red automatically when a posture fault is active
+  - Applied to all 3 pipelines:
+      • process_video_task  (uploaded video background worker)
+      • stream_video_ws     (uploaded video WebSocket streaming)
+      • live_stream_ws      (live webcam WebSocket)
+  - Replaces MediaPipe's default yellow-dot draw_landmarks in every pipeline
+  - display_fault = None initialiser added to process_video_task so the
+    skeleton has a valid value from frame 1

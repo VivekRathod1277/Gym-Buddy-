@@ -100,6 +100,98 @@ def decode_base64_frame(b64_str: str) -> np.ndarray:
             detail=f"Invalid base64 frame encoding: {e}"
         )
 
+# ── MediaPipe landmark indices used by the skeleton overlay ──────────────────
+# Full body connections we care about (matches the screenshot: torso + limbs).
+_SKELETON_CONNECTIONS = [
+    # Torso
+    (11, 12),  # shoulders
+    (11, 23),  # left shoulder → left hip
+    (12, 24),  # right shoulder → right hip
+    (23, 24),  # hips
+    # Left arm
+    (11, 13),  # left shoulder → elbow
+    (13, 15),  # left elbow → wrist
+    # Right arm
+    (12, 14),  # right shoulder → elbow
+    (14, 16),  # right elbow → wrist
+    # Left leg
+    (23, 25),  # left hip → knee
+    (25, 27),  # left knee → ankle
+    (27, 31),  # left ankle → foot index
+    # Right leg
+    (24, 26),  # right hip → knee
+    (26, 28),  # right knee → ankle
+    (28, 32),  # right ankle → foot index
+]
+
+# The key joint landmarks to draw circles on
+_KEY_JOINTS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32]
+
+
+def draw_skeleton_overlay(image, landmarks, has_fault: bool = False) -> None:
+    """
+    Draw a premium anatomical skeleton overlay on *image* (in-place).
+
+    Style matches the reference screenshot:
+      - Thick white bone lines with a subtle red/orange tint when a fault is
+        active.
+      - Large filled white circles at each key joint, with a faint glow ring.
+
+    Args:
+        image:      BGR frame (modified in-place).
+        landmarks:  mediapipe NormalizedLandmarkList.
+        has_fault:  When True, the bones are tinted red to flag bad form.
+    """
+    h, w = image.shape[:2]
+    lm = landmarks.landmark
+
+    # Colour scheme
+    bone_color   = (80, 80, 255) if has_fault else (255, 255, 255)  # red on fault, white normally
+    glow_color   = (40, 40, 180) if has_fault else (160, 200, 255)  # softer glow ring
+    joint_color  = (255, 255, 255)  # always white
+    bone_thick   = 3   # main bone line thickness
+    glow_thick   = 7   # glow halo thickness (drawn first, lower opacity)
+    joint_radius = 7   # filled circle radius
+    glow_radius  = 11  # glow ring radius
+
+    def _pt(idx):
+        """Convert normalised coords → pixel coords, return None if low visibility."""
+        if idx >= len(lm):
+            return None
+        mark = lm[idx]
+        if mark.visibility < 0.3:
+            return None
+        return (int(mark.x * w), int(mark.y * h))
+
+    # --- Bone connections (glow pass then solid pass) ---
+    glow_overlay = image.copy()
+    for (a, b) in _SKELETON_CONNECTIONS:
+        pa, pb = _pt(a), _pt(b)
+        if pa is None or pb is None:
+            continue
+        # Glow halo (semi-transparent thick line drawn on overlay)
+        cv2.line(glow_overlay, pa, pb, glow_color, glow_thick, cv2.LINE_AA)
+    # Blend the glow overlay at low alpha
+    cv2.addWeighted(glow_overlay, 0.35, image, 0.65, 0, image)
+
+    # Solid bone lines on top
+    for (a, b) in _SKELETON_CONNECTIONS:
+        pa, pb = _pt(a), _pt(b)
+        if pa is None or pb is None:
+            continue
+        cv2.line(image, pa, pb, bone_color, bone_thick, cv2.LINE_AA)
+
+    # --- Joint circles ---
+    for idx in _KEY_JOINTS:
+        pt = _pt(idx)
+        if pt is None:
+            continue
+        # Glow ring
+        cv2.circle(image, pt, glow_radius, glow_color, 2, cv2.LINE_AA)
+        # Filled joint
+        cv2.circle(image, pt, joint_radius, joint_color, -1, cv2.LINE_AA)
+
+
 def draw_hud_overlay(image, exercise_name, display_reps, angle, display_fault, tip_text, is_analyzing=False):
     """
     Draw the Premium HUD overlay on a frame.
@@ -280,6 +372,7 @@ def process_video_task(
     last_rep_count = 0
     tip_text = "Get into position, analysis will begin shortly."
     last_fault = None
+    display_fault = None  # initialised so skeleton overlay has a valid value from frame 1
     ai_last_trigger = 0
 
     try:
@@ -313,11 +406,8 @@ def process_video_task(
             )
 
             if results.pose_landmarks:
-                mp_drawing.draw_landmarks(
-                    image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
-                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
-                )
+                # Premium skeleton overlay (replaces mp_drawing default)
+                draw_skeleton_overlay(image, results.pose_landmarks, has_fault=bool(display_fault))
 
                 # Run custom posture classification prediction
                 _ = classifier.predict(results.pose_landmarks)
@@ -593,11 +683,8 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
             rgb_image.flags.writeable = True
 
             if results.pose_landmarks:
-                mp_drawing.draw_landmarks(
-                    image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
-                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
-                )
+                # Premium skeleton overlay
+                draw_skeleton_overlay(image, results.pose_landmarks, has_fault=bool(display_fault))
 
                 _ = classifier.predict(results.pose_landmarks)
                 eval_data = engine.evaluate_frame(results.pose_landmarks.landmark)
@@ -766,11 +853,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                     image = frame.copy()
 
                     if results.pose_landmarks:
-                        mp_drawing.draw_landmarks(
-                            image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                            mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
-                            mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
-                        )
+                        # Premium skeleton overlay during auto-detect phase
+                        draw_skeleton_overlay(image, results.pose_landmarks, has_fault=False)
 
                     if not is_detecting:
                         is_detecting = True
@@ -885,11 +969,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
             image = frame.copy()
 
             if results.pose_landmarks:
-                mp_drawing.draw_landmarks(
-                    image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                    mp_drawing.DrawingSpec(color=(255, 255, 0), thickness=2, circle_radius=2),
-                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=1)
-                )
+                # Premium skeleton overlay
+                draw_skeleton_overlay(image, results.pose_landmarks, has_fault=bool(display_fault))
 
                 _ = classifier.predict(results.pose_landmarks)
                 eval_data = engine.evaluate_frame(results.pose_landmarks.landmark)
