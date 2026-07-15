@@ -48,3 +48,16 @@ PENDING:
       • NVIDIA_API_KEY with sync: false  (must be pasted manually in Render
         dashboard — keeps the real key out of the repo)
   - Push this commit and Render will redeploy with the env vars present
+
+[2026-07-15 15:26] SKELETON OVERLAY VISIBILITY FIX: COMPLETE
+  - Bug 1 (CSS): Active-state wrapper div had no z-index, so raw webcam (z-5)
+    was rendering above the processed frame (z-10 inside z-auto parent).
+    Fix: wrapper now has zIndex:6; liveFrame img uses inline zIndex:15.
+    Raw webcam fallback also hides itself once liveFrame arrives (!liveFrame).
+  - Bug 2 (Backend): Landmark visibility threshold was 0.3 — at 320px wide,
+    a full-body person often has joints scoring 0.1–0.25, so skeleton was
+    silently skipped.
+    Fix: threshold lowered from 0.3 → 0.1 in draw_skeleton_overlay._pt()
+  - Files changed:
+      • frontend/src/pages/WorkoutPage.tsx
+      • backend-server/backend/workout.py

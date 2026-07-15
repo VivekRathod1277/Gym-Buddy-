@@ -159,7 +159,7 @@ def draw_skeleton_overlay(image, landmarks, has_fault: bool = False) -> None:
         if idx >= len(lm):
             return None
         mark = lm[idx]
-        if mark.visibility < 0.3:
+        if mark.visibility < 0.1:   # lowered from 0.3 — distant-person landmarks often score 0.1–0.3
             return None
         return (int(mark.x * w), int(mark.y * h))
 

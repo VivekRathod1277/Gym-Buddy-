@@ -605,8 +605,8 @@ export default function WorkoutPage() {
                 className="relative flex-1 bg-black overflow-hidden"
                 style={{ minHeight: '300px' }}
               >
-                {/* Raw Webcam Feed - shown while webcam is active as fallback */}
-                {webcamActive && status !== 'done' && (
+                {/* Raw Webcam Feed - shown while webcam is active BUT no processed frame yet */}
+                {webcamActive && status !== 'done' && !liveFrame && (
                   <video
                     ref={(el) => {
                       if (el && streamRef.current) {
@@ -674,7 +674,7 @@ export default function WorkoutPage() {
 
                 {/* Active State */}
                 {(isActive || status === 'done') && !processedVideoUrl && (
-                  <div className="absolute inset-0">
+                  <div className="absolute inset-0" style={{ zIndex: 6 }}>
 
                     {/* Processing Spinner - shown only before first frame arrives */}
                     {inputMode === 'upload' && !liveFrame && (
@@ -714,7 +714,8 @@ export default function WorkoutPage() {
                       <img
                         src={liveFrame}
                         alt="Live Processed Frame"
-                        className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
+                        className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                        style={{ zIndex: 15 }}
                       />
                     )}
 
