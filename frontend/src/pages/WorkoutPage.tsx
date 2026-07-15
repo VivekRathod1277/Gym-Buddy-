@@ -12,7 +12,7 @@ import { WS_URL, API_BASE } from '@/lib/api';
 
 export default function WorkoutPage() {
   const [inputMode, setInputMode] = useState<InputMode>('upload');
-  const [exerciseType, setExerciseType] = useState<ExerciseType>('auto');
+  const [exerciseType] = useState<ExerciseType>('auto');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<AnalysisStatus>('idle');
   const [reps, setReps] = useState(0);
