@@ -853,7 +853,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     print(f"[WS] Live stream started for user {user_id}, exercise {exercise}", flush=True)
 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
-    
+
     mp_pose = mp.solutions.pose
     pose = _make_pose(low_light=False)  # Step 10
     mp_drawing = mp.solutions.drawing_utils
@@ -866,6 +866,16 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
         try:
             detected_exercise = None
             is_detecting = False
+            # Bug fix: previously this loop had no exit condition other than a
+            # successful detection. If the AI advisor is unavailable (missing/
+            # invalid NVIDIA_API_KEY, rate limit, network error) detect_exercise()
+            # returns "unknown" forever and the session hung on "DETECTING
+            # EXERCISE..." indefinitely -- indistinguishable from "not analysing"
+            # on the user's side. Fall back to a default exercise after
+            # AUTO_DETECT_FALLBACK_SECS instead of looping forever.
+            detect_start_time = time.time()
+            AUTO_DETECT_FALLBACK_SECS = 8.0
+            FALLBACK_EXERCISE = "pushup"
 
             def on_detected(result):
                 nonlocal detected_exercise, is_detecting
@@ -902,9 +912,28 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                                 on_detected("unknown")
                         asyncio.create_task(run_detection(frame))
 
+                    timed_out = (time.time() - detect_start_time) > AUTO_DETECT_FALLBACK_SECS
+
                     if detected_exercise and detected_exercise.lower() not in ["unknown", "none", "", "auto"]:
                         print(f"[WS] Detected exercise: {detected_exercise}", flush=True)
                         exercise_file = f"{detected_exercise}.json"
+                        break
+                    elif timed_out:
+                        print(
+                            f"[WS] Auto-detect timed out after {AUTO_DETECT_FALLBACK_SECS}s "
+                            f"(AI advisor unavailable?) -- falling back to {FALLBACK_EXERCISE}",
+                            flush=True
+                        )
+                        detected_exercise = FALLBACK_EXERCISE
+                        exercise_file = f"{FALLBACK_EXERCISE}.json"
+                        await websocket.send_json({
+                            "status": "processing",
+                            "ai_tip": f"Couldn't auto-detect your exercise \u2014 starting {FALLBACK_EXERCISE} instead.",
+                            "exercise": FALLBACK_EXERCISE,
+                            "reps": 0,
+                            "angle": 0,
+                            "fault": None
+                        })
                         break
                     else:
                         # Draw detecting message on the frame
