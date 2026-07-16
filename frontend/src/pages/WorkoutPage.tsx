@@ -279,27 +279,43 @@ export default function WorkoutPage() {
               const canvas = canvasRef.current;
               const video = videoRef.current;
               if (video.videoWidth > 0 && video.videoHeight > 0) {
-                // Bug 1 fix: 320px was too small for MediaPipe — raised to 640px.
-                // JPEG quality raised from 0.4 → 0.75 to reduce artefacts on keypoints.
+                // Portrait fix: phone users hold the device upright → portrait frames.
+                // We auto-rotate portrait (h > w) 90° to landscape before sending.
+                // Landscape frames are ~4× smaller (less WebSocket latency) and
+                // MediaPipe BlazePose detects poses far more reliably on them.
+                // Bug 1 fix: MAX_WIDTH 320→640, JPEG quality 0.4→0.75
                 const MAX_WIDTH = 640;
-                let width = video.videoWidth;
-                let height = video.videoHeight;
-                
-                if (width > MAX_WIDTH) {
-                  height = Math.floor(height * (MAX_WIDTH / width));
-                  width = MAX_WIDTH;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
+                const isPortrait = video.videoHeight > video.videoWidth;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
-                  ctx.drawImage(video, 0, 0, width, height);
+                  if (isPortrait) {
+                    // Landscape canvas: portrait-height → landscape-width (≤640px)
+                    const scale = Math.min(MAX_WIDTH, video.videoHeight) / video.videoHeight;
+                    const lW = Math.round(video.videoHeight * scale); // landscape width
+                    const lH = Math.round(video.videoWidth * scale);  // landscape height
+                    canvas.width = lW;
+                    canvas.height = lH;
+                    // Rotate 90° CW: translate to right edge then rotate
+                    ctx.translate(lW, 0);
+                    ctx.rotate(Math.PI / 2);
+                    ctx.drawImage(video, 0, 0, lH, lW);
+                  } else {
+                    let w = video.videoWidth;
+                    let h = video.videoHeight;
+                    if (w > MAX_WIDTH) {
+                      h = Math.floor(h * (MAX_WIDTH / w));
+                      w = MAX_WIDTH;
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    ctx.drawImage(video, 0, 0, w, h);
+                  }
                   const b64 = canvas.toDataURL('image/jpeg', 0.75);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
                 }
               }
+
             }
             requestAnimationFrame(sendFrame);
           };

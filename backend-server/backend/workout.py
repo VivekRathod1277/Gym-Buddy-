@@ -43,6 +43,19 @@ def _make_pose(low_light: bool = False):
     )
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _auto_orient(frame: np.ndarray) -> np.ndarray:
+    """Rotate portrait frames (h > w) 90° CW to landscape before MediaPipe.
+    Phone users hold the device in portrait — the resulting tall, narrow frames
+    (e.g. 576×1296) hurt pose detection and bloat WebSocket payloads.
+    Rotating to landscape (e.g. 640×284) cuts data ~4× and improves detection.
+    """
+    if frame is None or frame.size == 0:
+        return frame
+    h, w = frame.shape[:2]
+    if h > w:
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+    return frame
+
 router = APIRouter(prefix="/api/workout", tags=["workout"])
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -93,6 +106,8 @@ def decode_base64_frame(b64_str: str) -> np.ndarray:
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError("Decoded image is None")
+        # Auto-orient: portrait frames from phone cameras are rotated to landscape
+        frame = _auto_orient(frame)
         return frame
     except Exception as e:
         raise HTTPException(
@@ -333,6 +348,12 @@ def process_video_task(
     if total_frames <= 0:
         total_frames = 1  # prevent division by zero
 
+    # Portrait uploaded videos: swap VideoWriter dimensions so the output is landscape
+    _portrait_video = height > width
+    if _portrait_video:
+        width, height = height, width
+        print(f"[VIDEO] Portrait video detected — rotating to landscape ({width}x{height})", flush=True)
+
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     if not out.isOpened():
@@ -380,6 +401,10 @@ def process_video_task(
             ret, frame = cap.read()
             if not ret:
                 break
+
+            # Auto-orient portrait uploaded videos to landscape
+            if _portrait_video:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
             processed_count += 1
             # Update progress ratio
@@ -622,9 +647,15 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     frame_delay = 1.0 / fps # target delay to stream at 1x speed
 
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    # Portrait uploaded videos: swap VideoWriter dimensions for landscape output
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    _portrait_video = height > width
+    if _portrait_video:
+        width, height = height, width
+        print(f"[WS] Portrait video detected — rotating to landscape ({width}x{height})", flush=True)
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     try:
@@ -665,6 +696,10 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
             ret, frame = cap.retrieve()
             if not ret:
                 break
+
+            # Auto-orient portrait uploaded videos to landscape
+            if _portrait_video:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
 
             # Step 13: enhance before pose estimation
             enhanced_frame, frame_class = enhance_if_needed(frame)
