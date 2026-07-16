@@ -43,19 +43,6 @@ def _make_pose(low_light: bool = False):
     )
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _auto_orient(frame: np.ndarray) -> np.ndarray:
-    """Rotate portrait frames (h > w) 90° CW to landscape before MediaPipe.
-    Phone users hold the device in portrait — the resulting tall, narrow frames
-    (e.g. 576×1296) hurt pose detection and bloat WebSocket payloads.
-    Rotating to landscape (e.g. 640×284) cuts data ~4× and improves detection.
-    """
-    if frame is None or frame.size == 0:
-        return frame
-    h, w = frame.shape[:2]
-    if h > w:
-        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-    return frame
-
 router = APIRouter(prefix="/api/workout", tags=["workout"])
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -107,7 +94,7 @@ def decode_base64_frame(b64_str: str) -> np.ndarray:
         if frame is None:
             raise ValueError("Decoded image is None")
         # Auto-orient: portrait frames from phone cameras are rotated to landscape
-        frame = _auto_orient(frame)
+        
         return frame
     except Exception as e:
         raise HTTPException(
@@ -957,8 +944,21 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                         })
                         await asyncio.sleep(0)
         except Exception as e:
-            print(f"[WS] Auto-detect failed: {e}", flush=True)
+            import traceback
+            err_msg = traceback.format_exc()
+            print(f"[WS] Auto-detect failed: {e}\n{err_msg}", flush=True)
             exercise_file = "pushup.json"
+            try:
+                await websocket.send_json({
+                    "status": "processing",
+                    "ai_tip": f"Auto-detect error: {str(e)}",
+                    "exercise": "pushup",
+                    "reps": 0,
+                    "angle": 0,
+                    "fault": None
+                })
+            except Exception:
+                pass
 
     exercise_name = exercise_file.replace(".json", "")
     blueprint_path = _find_blueprint(exercise_file)
@@ -1122,3 +1122,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
         except Exception:
             pass
         await websocket.close()
+
+
+
+

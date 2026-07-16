@@ -285,31 +285,19 @@ export default function WorkoutPage() {
                 // MediaPipe BlazePose detects poses far more reliably on them.
                 // Bug 1 fix: MAX_WIDTH 320→640, JPEG quality 0.4→0.75
                 const MAX_WIDTH = 640;
-                const isPortrait = video.videoHeight > video.videoWidth;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
-                  if (isPortrait) {
-                    // Landscape canvas: portrait-height → landscape-width (≤640px)
-                    const scale = Math.min(MAX_WIDTH, video.videoHeight) / video.videoHeight;
-                    const lW = Math.round(video.videoHeight * scale); // landscape width
-                    const lH = Math.round(video.videoWidth * scale);  // landscape height
-                    canvas.width = lW;
-                    canvas.height = lH;
-                    // Rotate 90° CW: translate to right edge then rotate
-                    ctx.translate(lW, 0);
-                    ctx.rotate(Math.PI / 2);
-                    ctx.drawImage(video, 0, 0, lH, lW);
-                  } else {
-                    let w = video.videoWidth;
-                    let h = video.videoHeight;
-                    if (w > MAX_WIDTH) {
-                      h = Math.floor(h * (MAX_WIDTH / w));
-                      w = MAX_WIDTH;
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    ctx.drawImage(video, 0, 0, w, h);
+                  let w = video.videoWidth;
+                  let h = video.videoHeight;
+                  const maxDim = Math.max(w, h);
+                  if (maxDim > MAX_WIDTH) {
+                    const scale = MAX_WIDTH / maxDim;
+                    w = Math.floor(w * scale);
+                    h = Math.floor(h * scale);
                   }
+                  canvas.width = w;
+                  canvas.height = h;
+                  ctx.drawImage(video, 0, 0, w, h);
                   const b64 = canvas.toDataURL('image/jpeg', 0.75);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
@@ -915,3 +903,4 @@ export default function WorkoutPage() {
     </div>
   );
 }
+
