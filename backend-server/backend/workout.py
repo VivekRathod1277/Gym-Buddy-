@@ -965,8 +965,9 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 if results.pose_landmarks else 0.0
             )
 
-            # Draw skeleton on the actual frame (not a black canvas)
-            image = frame.copy()
+            # Draw the skeleton on the enhanced frame so brightness/contrast improvements
+            # are visible in the output — previously used original frame (Bug 3 fix)
+            image = enhanced_frame.copy()
 
             if results.pose_landmarks:
                 # Premium skeleton overlay

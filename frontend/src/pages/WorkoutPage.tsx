@@ -217,6 +217,8 @@ export default function WorkoutPage() {
           // receives a usable frame even in dim conditions
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
+              // Bug 2 fix: force rear camera on mobile — front camera gives portrait/mirrored frames
+              facingMode: { ideal: 'environment' },
               width: { ideal: 1280 },
               height: { ideal: 720 },
               frameRate: { ideal: 30 },
@@ -277,7 +279,9 @@ export default function WorkoutPage() {
               const canvas = canvasRef.current;
               const video = videoRef.current;
               if (video.videoWidth > 0 && video.videoHeight > 0) {
-                const MAX_WIDTH = 320;
+                // Bug 1 fix: 320px was too small for MediaPipe — raised to 640px.
+                // JPEG quality raised from 0.4 → 0.75 to reduce artefacts on keypoints.
+                const MAX_WIDTH = 640;
                 let width = video.videoWidth;
                 let height = video.videoHeight;
                 
@@ -291,7 +295,7 @@ export default function WorkoutPage() {
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                   ctx.drawImage(video, 0, 0, width, height);
-                  const b64 = canvas.toDataURL('image/jpeg', 0.4);
+                  const b64 = canvas.toDataURL('image/jpeg', 0.75);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
                 }

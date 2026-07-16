@@ -61,3 +61,34 @@ PENDING:
   - Files changed:
       • frontend/src/pages/WorkoutPage.tsx
       • backend-server/backend/workout.py
+
+[2026-07-16 08:51] MOBILE DETECTION BUG FIXES (Bugs 1-4): COMPLETE
+  Root cause analysis from manual mobile testing — pose detection was failing
+  even in proper lighting due to 4 compounding bugs:
+
+  - Bug 1 (CRITICAL | WorkoutPage.tsx:280): Frame was hard-capped at 320px wide
+    at JPEG quality 0.4 before WebSocket send. MediaPipe BlazePose cannot reliably
+    detect joints at 320×180 with heavy JPEG artefacts.
+    Fix: MAX_WIDTH raised 320→640; JPEG quality raised 0.4→0.75.
+
+  - Bug 2 (CRITICAL | WorkoutPage.tsx:218): No facingMode constraint — mobile
+    browsers defaulted to the front (selfie) camera, giving portrait/mirrored
+    frames where body geometry is inverted and joint angles miscalculated.
+    Fix: Added facingMode: { ideal: 'environment' } to getUserMedia().
+
+  - Bug 3 (HIGH | workout.py:969): live_stream_ws was running MediaPipe on
+    enhanced_frame but drawing the skeleton overlay on the original frame.
+    Enhancement was correct for detection but wasted for visual output.
+    Fix: Changed image = frame.copy() → image = enhanced_frame.copy().
+
+  - Bug 4 (HIGH | frame_enhancer.py:16): BRIGHTNESS_LOW_THRESHOLD was 80.
+    Phone cameras apply auto-HDR before frames reach the browser, so a dim gym
+    at proper brightness measures ~90-120 mean — "normal" to the classifier,
+    so the CLAHE/gamma enhancement pipeline never triggered.
+    Fix: Threshold raised 80→100.
+
+  - Files changed:
+      • frontend/src/pages/WorkoutPage.tsx
+      • backend-server/backend/workout.py
+      • backend-server/core/frame_enhancer.py
+

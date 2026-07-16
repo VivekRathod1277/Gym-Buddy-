@@ -13,7 +13,10 @@ import cv2
 import numpy as np
 
 # ─── Tunable constants ────────────────────────────────────────────────────────
-BRIGHTNESS_LOW_THRESHOLD = 80     # Mean brightness below this → low-light
+# Bug 4 fix: raised from 80 → 100. Phone cameras apply auto-HDR, so a dim gym
+# can still measure mean brightness ~90-120, causing the low-light path to never
+# trigger even when enhancement would help MediaPipe detection.
+BRIGHTNESS_LOW_THRESHOLD = 100    # Mean brightness below this → low-light
 BRIGHTNESS_HIGH_THRESHOLD = 200   # Mean brightness above this → overexposed
 CLAHE_CLIP_LIMIT = 2.5            # CLAHE contrast limit (higher = more contrast)
 CLAHE_TILE_GRID_SIZE = (8, 8)     # CLAHE tile size
