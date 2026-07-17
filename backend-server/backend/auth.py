@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 import jwt
 from backend.schemas import UserRegister, UserLogin, Token, TokenData
 from backend.dependencies import SECRET_KEY, ALGORITHM, get_current_user
-from core.database import register_user, login_user
+from core.database import register_user, login_user, get_user_name
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -69,7 +69,12 @@ def login_json(user_data: UserLogin):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me", response_model=TokenData)
+@router.get("/me")
 def read_users_me(current_user: TokenData = Depends(get_current_user)):
     """Retrieve details of the currently authenticated user."""
-    return current_user
+    name = get_user_name(current_user.user_id)
+    return {
+        "email": current_user.email,
+        "user_id": current_user.user_id,
+        "name": name,
+    }

@@ -1,6 +1,7 @@
 export interface User {
   id: string;
   email: string;
+  name?: string;
 }
 
 export interface ExerciseSession {
@@ -19,6 +20,34 @@ export type AnalysisStatus = 'idle' | 'scanning' | 'active' | 'done';
 export type InputMode = 'upload' | 'webcam';
 
 export type ExerciseType = 'auto' | 'pushup' | 'pullup' | 'squat' | 'bicep_curl' | 'chest_press';
+
+// ── AI Trainer Flow ─────────────────────────────────────────────────────────
+
+export type WorkoutFlowStep =
+  | 'greeting'
+  | 'workout-select'
+  | 'positioning'
+  | 'exercising'
+  | 'set-summary'
+  | 'session-end';
+
+export const MUSCLE_GROUPS: Record<string, string> = {
+  pushup: 'Chest',
+  chest_press: 'Chest',
+  pullup: 'Back',
+  squat: 'Legs',
+  bicep_curl: 'Arms',
+};
+
+export const EXERCISE_DISPLAY_NAMES: Record<string, string> = {
+  pushup: 'Push-ups',
+  pullup: 'Pull-ups',
+  squat: 'Squats',
+  bicep_curl: 'Bicep Curls',
+  chest_press: 'Chest Press',
+};
+
+// ── Exercise Configs ────────────────────────────────────────────────────────
 
 export interface ExerciseConfig {
   name: string;

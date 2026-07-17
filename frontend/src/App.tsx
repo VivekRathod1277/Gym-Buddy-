@@ -7,6 +7,7 @@ import ToastContainer from '@/components/ToastContainer';
 import AuthPage from '@/pages/AuthPage';
 import WorkoutPage from '@/pages/WorkoutPage';
 import HistoryPage from '@/pages/HistoryPage';
+import TrainerPage from '@/pages/TrainerPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -33,6 +34,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <HistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trainer"
+        element={
+          <ProtectedRoute>
+            <TrainerPage />
           </ProtectedRoute>
         }
       />

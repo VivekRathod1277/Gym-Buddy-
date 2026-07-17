@@ -36,7 +36,7 @@ export default function AuthPage() {
     const success = await login(email, password);
     if (success) {
       addToast('Welcome back!', 'success');
-      navigate('/workout');
+      navigate('/trainer');
     } else {
       addToast('Invalid credentials', 'error');
     }

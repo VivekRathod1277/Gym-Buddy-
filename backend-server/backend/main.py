@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.auth import router as auth_router
 from backend.sessions import router as sessions_router
 from backend.workout import router as workout_router
+from backend.coach import router as coach_router
 import uvicorn
 
 app = FastAPI(
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(sessions_router)
 app.include_router(workout_router)
+app.include_router(coach_router)
 
 @app.get("/")
 def read_root():
