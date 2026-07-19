@@ -283,8 +283,8 @@ export default function WorkoutPage() {
                 // We auto-rotate portrait (h > w) 90° to landscape before sending.
                 // Landscape frames are ~4× smaller (less WebSocket latency) and
                 // MediaPipe BlazePose detects poses far more reliably on them.
-                // Bug 1 fix: MAX_WIDTH 320→640, JPEG quality 0.4→0.75
-                const MAX_WIDTH = 640;
+                // Bug 1 fix: MAX_WIDTH 320→480, JPEG quality 0.4→0.6 (compromise for speed)
+                const MAX_WIDTH = 480;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                   let w = video.videoWidth;
@@ -298,7 +298,7 @@ export default function WorkoutPage() {
                   canvas.width = w;
                   canvas.height = h;
                   ctx.drawImage(video, 0, 0, w, h);
-                  const b64 = canvas.toDataURL('image/jpeg', 0.75);
+                  const b64 = canvas.toDataURL('image/jpeg', 0.6);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
                 }

@@ -118,7 +118,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
               const canvas = canvasRef.current;
               const video = videoRef.current;
               if (video.videoWidth > 0 && video.videoHeight > 0) {
-                const MAX_WIDTH = 640;
+                const MAX_WIDTH = 480;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                   let w = video.videoWidth;
@@ -132,7 +132,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
                   canvas.width = w;
                   canvas.height = h;
                   ctx.drawImage(video, 0, 0, w, h);
-                  const b64 = canvas.toDataURL('image/jpeg', 0.75);
+                  const b64 = canvas.toDataURL('image/jpeg', 0.6);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise }));
                 }
