@@ -504,10 +504,10 @@ export default function WorkoutPage() {
   const exerciseColor = EXERCISE_COLORS[effectiveExercise as ExerciseType] || '#00d4ff';
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#0a0a0f' }}>
+    <div className="min-h-[100dvh] flex" style={{ background: '#0a0a0f' }}>
       <Sidebar />
 
-      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-screen">
+      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-[100dvh]">
         {/* Page Header */}
         <div
           className="px-4 md:px-8 py-4 md:py-6"
