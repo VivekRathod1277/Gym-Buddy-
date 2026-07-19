@@ -660,20 +660,6 @@ export default function WorkoutPage() {
                     autoPlay
                   />
                 )}
-                {/* Flip Camera Button */}
-                {inputMode === 'webcam' && (
-                  <button
-                    onClick={toggleCamera}
-                    className="absolute top-3 right-3 z-40 px-3 py-2 rounded-lg font-inter text-xs font-semibold tracking-wider uppercase flex items-center gap-2 transition-all hover:bg-white/10"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.7)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                    }}
-                  >
-                    <span>🔄</span> FLIP CAM
-                  </button>
-                )}
 
                 {/* Idle State */}
                 {status === 'idle' && (
@@ -838,7 +824,7 @@ export default function WorkoutPage() {
           </div>
 
           {/* Stats Row */}
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-4 md:mt-0 flex-none">
+          <div className="grid grid-cols-2 md:flex md:flex-row gap-4 md:gap-6 mt-4 md:mt-0 flex-none">
             {/* Rep Counter */}
             <div className="neo-card flex-1 p-4 md:p-5 flex flex-col">
               <div className="flex items-end gap-2">
@@ -894,9 +880,21 @@ export default function WorkoutPage() {
                 </span>
               </div>
               <span className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mt-1">
-                STATUS
+                SYSTEM STATUS
               </span>
             </div>
+
+            {/* Flip Camera (Webcam only) */}
+            {inputMode === 'webcam' && (
+              <div className="neo-card flex-1 p-4 md:p-5 flex flex-col justify-center items-center cursor-pointer hover:bg-white/5 transition-colors" onClick={toggleCamera}>
+                <div className="flex items-end gap-2">
+                  <span className="font-orbitron font-bold text-4xl text-[#e0e0e0]">🔄</span>
+                </div>
+                <span className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mt-2">
+                  FLIP CAMERA
+                </span>
+              </div>
+            )}
           </div>
 
           {/* AI Advisor Panel */}

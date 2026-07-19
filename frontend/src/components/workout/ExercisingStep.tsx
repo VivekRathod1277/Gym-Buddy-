@@ -358,38 +358,36 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           </div>
         )}
 
-        {/* Flip Camera Button */}
-        <button
-          onClick={toggleCamera}
-          className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-lg font-inter text-xs font-semibold tracking-wider uppercase flex items-center gap-1 transition-all hover:bg-white/10"
-          style={{
-            background: 'rgba(0, 0, 0, 0.7)',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-          }}
-        >
-          <span>🔄</span> FLIP
-        </button>
       </div>
 
       {/* Bottom stats bar */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Reps */}
-        <div className="flex-1 p-3 rounded-xl text-center" style={{ background: 'rgba(0, 212, 255, 0.06)' }}>
-          <div className="font-orbitron font-black text-3xl text-[#e0e0e0]">{reps}</div>
-          <div className="font-inter text-[10px] font-semibold text-[#8888aa] tracking-wider uppercase">REPS</div>
+        <div className="flex-1 p-2 md:p-3 rounded-xl text-center" style={{ background: 'rgba(0, 212, 255, 0.06)' }}>
+          <div className="font-orbitron font-black text-2xl md:text-3xl text-[#e0e0e0]">{reps}</div>
+          <div className="font-inter text-[9px] md:text-[10px] font-semibold text-[#8888aa] tracking-wider uppercase">REPS</div>
         </div>
 
         {/* Angle */}
-        <div className="flex-1 p-3 rounded-xl text-center" style={{ background: 'rgba(123, 47, 247, 0.06)' }}>
-          <div className="font-orbitron font-bold text-2xl text-[#e0e0e0]">{Math.round(angle)}°</div>
-          <div className="font-inter text-[10px] font-semibold text-[#8888aa] tracking-wider uppercase">ANGLE</div>
+        <div className="flex-1 p-2 md:p-3 rounded-xl text-center" style={{ background: 'rgba(123, 47, 247, 0.06)' }}>
+          <div className="font-orbitron font-bold text-xl md:text-2xl text-[#e0e0e0]">{Math.round(angle)}°</div>
+          <div className="font-inter text-[9px] md:text-[10px] font-semibold text-[#8888aa] tracking-wider uppercase">ANGLE</div>
         </div>
+
+        {/* Flip Camera */}
+        <button
+          onClick={toggleCamera}
+          className="flex-1 p-2 md:p-3 rounded-xl flex flex-col items-center justify-center transition-all hover:bg-white/10"
+          style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <span className="text-lg md:text-xl mb-0.5">🔄</span>
+          <span className="font-inter text-[9px] md:text-[10px] font-semibold text-[#8888aa] tracking-wider uppercase">FLIP</span>
+        </button>
 
         {/* Stop button */}
         <button
           onClick={handleStopSet}
-          className="flex-1 py-3 rounded-xl font-orbitron font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105"
+          className="flex-[1.5] py-2 md:py-3 rounded-xl font-orbitron font-bold text-xs md:text-sm tracking-wider uppercase flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 transition-all duration-200 hover:scale-105"
           style={{
             background: 'linear-gradient(135deg, #ff4d6d, #d90429)',
             boxShadow: '0 0 15px rgba(255, 77, 109, 0.3)',
@@ -397,7 +395,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           }}
         >
           <span>⏹</span>
-          END SET
+          <span className="text-[10px] md:text-sm">END SET</span>
         </button>
       </div>
 
