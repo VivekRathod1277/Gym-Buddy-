@@ -92,3 +92,13 @@ PENDING:
       • backend-server/backend/workout.py
       • backend-server/core/frame_enhancer.py
 
+[2026-07-19 15:09] MOBILE UI & SCOPE BUG FIXES: COMPLETE
+  - Bug 1 (JS Execution): Fixed `Block-scoped variable 'addToast' used before its declaration` in WorkoutPage.tsx by hoisting hook declarations above the toggleCamera definition.
+  - Bug 2 (Mobile Viewport): Replaced h-full and min-h-screen with h-[100dvh] and min-h-[100dvh] in TrainerPage.tsx and WorkoutPage.tsx to properly expand on mobile and fix the camera aspect ratio/empty space.
+  - Bug 3 (Scrolling): Added overflow-y-auto overflow-x-hidden to TrainerPage.tsx main flow area so the setup checklist in PositioningStep is scrollable.
+  - Bug 4 (Camera Flip UI): Added the "Flip Camera" button overlay to PositioningStep.tsx and fixed mirror transform (only user-facing camera gets scaleX(-1)).
+
+  - Files changed:
+      • frontend/src/pages/WorkoutPage.tsx
+      • frontend/src/pages/TrainerPage.tsx
+      • frontend/src/components/workout/PositioningStep.tsx

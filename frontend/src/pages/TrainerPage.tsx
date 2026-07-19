@@ -100,7 +100,7 @@ export default function TrainerPage() {
 
       {/* Main Flow Area */}
       <div
-        className={`flex-1 flex flex-col transition-opacity duration-400 ease-in-out z-10 ${
+        className={`flex-1 flex flex-col transition-opacity duration-400 ease-in-out z-10 overflow-y-auto overflow-x-hidden ${
           isFading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'
         }`}
       >
