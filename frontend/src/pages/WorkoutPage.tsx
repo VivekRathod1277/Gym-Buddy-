@@ -29,7 +29,44 @@ export default function WorkoutPage() {
   const [detectedExercise, setDetectedExercise] = useState<string | null>(null);
   const [webcamActive, setWebcamActive] = useState(false);
   const [lowPoseConfidence, setLowPoseConfidence] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(
+    (localStorage.getItem('cameraFacingMode') as 'user' | 'environment') || 'environment'
+  );
   const lowConfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { addSession } = useSessions();
+  const { speak } = useVoice();
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+
+  const toggleCamera = useCallback(async () => {
+    const newMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newMode);
+    localStorage.setItem('cameraFacingMode', newMode);
+    
+    if (streamRef.current && webcamActive) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: newMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 },
+          },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (err) {
+        console.error('Failed to flip camera:', err);
+        addToast('Failed to switch camera.', 'error');
+      }
+    }
+  }, [facingMode, webcamActive, addToast]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const faultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,11 +76,6 @@ export default function WorkoutPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-
-  const { addSession } = useSessions();
-  const { speak } = useVoice();
-  const { addToast } = useToast();
-  const navigate = useNavigate();
 
   // Cleanup intervals on unmount
   useEffect(() => {
@@ -217,8 +249,7 @@ export default function WorkoutPage() {
           // receives a usable frame even in dim conditions
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
-              // Bug 2 fix: force rear camera on mobile — front camera gives portrait/mirrored frames
-              facingMode: { ideal: 'environment' },
+              facingMode: { ideal: localStorage.getItem('cameraFacingMode') || 'environment' },
               width: { ideal: 1280 },
               height: { ideal: 720 },
               frameRate: { ideal: 30 },
@@ -629,6 +660,21 @@ export default function WorkoutPage() {
                     autoPlay
                   />
                 )}
+                {/* Flip Camera Button */}
+                {inputMode === 'webcam' && (
+                  <button
+                    onClick={toggleCamera}
+                    className="absolute top-3 right-3 z-40 px-3 py-2 rounded-lg font-inter text-xs font-semibold tracking-wider uppercase flex items-center gap-2 transition-all hover:bg-white/10"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.7)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                    }}
+                  >
+                    <span>🔄</span> FLIP CAM
+                  </button>
+                )}
+
                 {/* Idle State */}
                 {status === 'idle' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center">

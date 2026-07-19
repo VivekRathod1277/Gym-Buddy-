@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS } from '@/types';
 import api from '@/lib/api';
@@ -15,6 +15,36 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
   const [loading, setLoading] = useState(true);
   const [poseDetected, setPoseDetected] = useState(false);
   const [readyCountdown, setReadyCountdown] = useState<number | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(
+    (localStorage.getItem('cameraFacingMode') as 'user' | 'environment') || 'environment'
+  );
+
+  const toggleCamera = useCallback(async () => {
+    const newMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newMode);
+    localStorage.setItem('cameraFacingMode', newMode);
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: newMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (err) {
+        console.error('Failed to flip camera:', err);
+      }
+    }
+  }, [facingMode]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -80,7 +110,7 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: 'environment' },
+            facingMode: { ideal: localStorage.getItem('cameraFacingMode') || 'environment' },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -190,6 +220,19 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
           >
             📐 POSITIONING
           </div>
+
+          {/* Flip Camera Button */}
+          <button
+            onClick={toggleCamera}
+            className="absolute top-3 right-3 z-10 px-3 py-1.5 rounded-lg font-inter text-xs font-semibold tracking-wider uppercase flex items-center gap-1 transition-all hover:bg-white/10"
+            style={{
+              background: 'rgba(0, 0, 0, 0.7)',
+              color: '#fff',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            <span>🔄</span> FLIP
+          </button>
         </div>
 
         {/* Tips checklist */}
