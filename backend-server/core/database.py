@@ -35,7 +35,13 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            name TEXT DEFAULT NULL
+            name TEXT DEFAULT NULL,
+            age INTEGER DEFAULT NULL,
+            gender TEXT DEFAULT NULL,
+            height REAL DEFAULT NULL,
+            weight REAL DEFAULT NULL,
+            activity REAL DEFAULT NULL,
+            diet_type TEXT DEFAULT NULL
         )
     ''')
 
@@ -54,11 +60,34 @@ def init_db():
         )
     ''')
 
+    # Fitness Records table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS fitness_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            weight REAL NOT NULL,
+            height REAL NOT NULL,
+            bmi REAL NOT NULL,
+            calories INTEGER NOT NULL,
+            goal TEXT NOT NULL,
+            plan_json TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+
     # Migrate existing tables: add columns if they don't exist
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN name TEXT DEFAULT NULL")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+    for col, col_type in [("name", "TEXT DEFAULT NULL"),
+                          ("age", "INTEGER DEFAULT NULL"),
+                          ("gender", "TEXT DEFAULT NULL"),
+                          ("height", "REAL DEFAULT NULL"),
+                          ("weight", "REAL DEFAULT NULL"),
+                          ("activity", "REAL DEFAULT NULL"),
+                          ("diet_type", "TEXT DEFAULT NULL")]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
 
     try:
         cursor.execute("ALTER TABLE exercise_sessions ADD COLUMN duration INTEGER DEFAULT 0")
@@ -117,6 +146,39 @@ def update_user_name(user_id: int, name: str) -> bool:
     return affected > 0
 
 
+def get_user_profile(user_id: int) -> dict | None:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT age, gender, height, weight, activity, diet_type FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "age": row[0],
+        "gender": row[1],
+        "height": row[2],
+        "weight": row[3],
+        "activity": row[4],
+        "diet_type": row[5]
+    }
+
+
+def update_user_profile(user_id: int, age: int, gender: str, height: float, weight: float, activity: float, diet_type: str) -> bool:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE users 
+        SET age = ?, gender = ?, height = ?, weight = ?, activity = ?, diet_type = ? 
+        WHERE id = ?
+    ''', (age, gender, height, weight, activity, diet_type, user_id))
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+    return affected > 0
+
+
+
 # ── Session Storage ──────────────────────────────────────────────────────────
 
 def save_session(user_id, exercise_name, total_reps, faults, ai_suggestion, duration=0):
@@ -140,6 +202,43 @@ def get_user_history(user_id):
     history = cursor.fetchall()
     conn.close()
     return history
+
+
+def save_fitness_record(user_id: int, weight: float, height: float, bmi: float, calories: int, goal: str, plan_json: str):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO fitness_records (user_id, weight, height, bmi, calories, goal, plan_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, weight, height, bmi, calories, goal, plan_json))
+    conn.commit()
+    conn.close()
+
+
+def get_fitness_history(user_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, date, weight, height, bmi, calories, goal, plan_json 
+        FROM fitness_records 
+        WHERE user_id = ? 
+        ORDER BY date DESC
+    """, (user_id,))
+    
+    records = []
+    for row in cursor.fetchall():
+        records.append({
+            "id": row[0],
+            "date": row[1],
+            "weight": row[2],
+            "height": row[3],
+            "bmi": row[4],
+            "calories": row[5],
+            "goal": row[6],
+            "plan_json": row[7]
+        })
+    conn.close()
+    return records
 
 
 # ── AI Trainer: Weekly History ───────────────────────────────────────────────

@@ -69,6 +69,14 @@ export default function Sidebar() {
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HISTORY</span>
         </button>
 
+        <button
+          onClick={() => navigate('/diet-planner')}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
+        >
+          <span className="text-xl md:text-lg">&#127822;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">DIET</span>
+        </button>
+
         {/* Mute Toggle (Icon only on mobile, full text on desktop) */}
         <button
           onClick={toggleMute}

@@ -8,6 +8,8 @@ import AuthPage from '@/pages/AuthPage';
 import WorkoutPage from '@/pages/WorkoutPage';
 import HistoryPage from '@/pages/HistoryPage';
 import TrainerPage from '@/pages/TrainerPage';
+import DietPlannerPage from '@/pages/DietPlannerPage';
+import DietDashboardPage from '@/pages/DietDashboardPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -42,6 +44,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <TrainerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/diet-planner"
+        element={
+          <ProtectedRoute>
+            <DietPlannerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/diet-dashboard"
+        element={
+          <ProtectedRoute>
+            <DietDashboardPage />
           </ProtectedRoute>
         }
       />

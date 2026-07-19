@@ -30,4 +30,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+export const dietApi = {
+  getProfile: () => api.get('/diet/profile').then(res => res.data),
+  generatePlan: (data: any) => api.post('/diet/generate', data).then(res => res.data),
+  getHistory: () => api.get('/diet/history').then(res => res.data),
+  downloadPdf: (resultsJson: string) => {
+    return api.post('/diet/download_pdf', { results_json: resultsJson }, { responseType: 'blob' })
+      .then(res => {
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'AI_Fitness_Weekly_Plan.pdf');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      });
+  }
+};
+
 export default api;
