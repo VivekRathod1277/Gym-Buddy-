@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS } from '@/types';
 import api from '@/lib/api';
