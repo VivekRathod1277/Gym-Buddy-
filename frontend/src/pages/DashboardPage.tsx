@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { dietApi } from '@/lib/api';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
+import Sidebar from '@/components/Sidebar';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -69,14 +70,18 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#242730] text-white">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-32 md:pb-12 px-4 md:px-8 max-w-7xl mx-auto">
-      
-      <div className="mb-8">
-        <h1 className="font-orbitron text-3xl md:text-4xl text-white font-bold mb-2">
+    <div className="min-h-screen flex bg-[#242730]">
+      <Sidebar />
+
+      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-screen">
+        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+          
+          <div className="mb-8">
+            <h1 className="font-orbitron text-3xl md:text-4xl text-white font-bold mb-2">
           WELCOME BACK
         </h1>
         <p className="text-gray-400 font-inter text-sm md:text-base">
@@ -108,7 +113,7 @@ export default function DashboardPage() {
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#00ff88]/10 rounded-full blur-3xl group-hover:bg-[#00ff88]/20 transition-all"></div>
             <h2 className="font-orbitron text-2xl text-white font-bold mb-2 flex items-center gap-3">
-              <span className="text-[#00ff88]">&#127822;</span> DIET & MEAL PLAN
+              <span className="text-[#00ff88]">&#127822;</span> DIET & WORKOUT PLAN
             </h2>
             <p className="text-gray-400 text-sm mb-4 max-w-md">
               Generate a personalized 7-day meal and workout plan based on your latest fitness metrics.
@@ -229,8 +234,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-
-      </div>
+      </main>
     </div>
   );
 }
