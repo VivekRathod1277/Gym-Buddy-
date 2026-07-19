@@ -74,34 +74,39 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
   }, [tips, loading, speak, exerciseName]);
 
   // Start camera
-  const startCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-    } catch (err) {
-      console.error('Camera access failed:', err);
-    }
-  }, []);
-
   useEffect(() => {
+    let cancelled = false;
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (err) {
+        console.error('Camera access failed:', err);
+      }
+    };
     startCamera();
     return () => {
+      cancelled = true;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
     };
-  }, [startCamera]);
+  }, []);
 
   // Countdown before starting exercise
   const handleReady = () => {

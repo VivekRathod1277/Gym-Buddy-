@@ -617,7 +617,7 @@ export default function WorkoutPage() {
                 {webcamActive && status !== 'done' && !liveFrame && (
                   <video
                     ref={(el) => {
-                      if (el && streamRef.current) {
+                      if (el && streamRef.current && el.srcObject !== streamRef.current) {
                         el.srcObject = streamRef.current;
                         el.play().catch(() => {});
                       }
@@ -710,7 +710,12 @@ export default function WorkoutPage() {
 
                     {/* Raw Video Feed Background (webcam only, hidden during upload) */}
                     <video 
-                      ref={videoRef} 
+                      ref={(el) => {
+                        if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                          el.srcObject = streamRef.current;
+                          el.play().catch(() => {});
+                        }
+                      }}
                       className="absolute inset-0 w-full h-full object-contain rounded-xl z-0" 
                       style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none', opacity: inputMode === 'upload' ? 0 : 1 }}
                       muted 
