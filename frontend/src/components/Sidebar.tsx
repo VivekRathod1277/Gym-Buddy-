@@ -54,6 +54,14 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex flex-row md:flex-col gap-2 md:gap-4 w-full md:flex-1 justify-around md:justify-start">
         <button
+          onClick={() => navigate('/dashboard')}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
+        >
+          <span className="text-xl md:text-lg">&#127968;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HOME</span>
+        </button>
+
+        <button
           onClick={() => navigate('/workout')}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
         >

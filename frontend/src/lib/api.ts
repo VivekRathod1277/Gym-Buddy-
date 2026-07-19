@@ -32,6 +32,7 @@ api.interceptors.request.use(
 
 export const dietApi = {
   getProfile: () => api.get('/diet/profile').then(res => res.data),
+  updateProfile: (data: any) => api.put('/diet/profile', data).then(res => res.data),
   generatePlan: (data: any) => api.post('/diet/generate', data).then(res => res.data),
   getHistory: () => api.get('/diet/history').then(res => res.data),
   downloadPdf: (resultsJson: string) => {

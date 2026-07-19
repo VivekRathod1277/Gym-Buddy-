@@ -22,12 +22,15 @@ router = APIRouter(prefix="/api/diet", tags=["diet"])
 # --- Schemas ---
 
 class ProfileUpdate(BaseModel):
+    email: str
     age: int
     gender: str
     height: float
     weight: float
     activity: float
     diet_type: str
+    mobile_no: str
+    date_of_birth: str
 
 class GeneratePlanRequest(BaseModel):
     age: int
@@ -383,12 +386,15 @@ def get_profile(current_user: TokenData = Depends(get_current_user)):
 def update_profile(data: ProfileUpdate, current_user: TokenData = Depends(get_current_user)):
     success = update_user_profile(
         current_user.user_id,
+        data.email,
         data.age,
         data.gender,
         data.height,
         data.weight,
         data.activity,
-        data.diet_type
+        data.diet_type,
+        data.mobile_no,
+        data.date_of_birth
     )
     if success:
         return {"message": "Profile updated successfully"}
@@ -397,15 +403,24 @@ def update_profile(data: ProfileUpdate, current_user: TokenData = Depends(get_cu
 @router.post("/generate")
 def generate_plan(data: GeneratePlanRequest, current_user: TokenData = Depends(get_current_user)):
     try:
+        # Fetch current profile to preserve email, mobile_no, date_of_birth
+        curr_profile = get_user_profile(current_user.user_id) or {}
+        email = curr_profile.get("email", "")
+        mobile_no = curr_profile.get("mobile_no", "")
+        dob = curr_profile.get("date_of_birth", "")
+
         # Update user profile
         update_user_profile(
             current_user.user_id,
+            email,
             data.age,
             data.gender,
             data.height,
             data.weight,
             data.activity,
-            data.diet_type
+            data.diet_type,
+            mobile_no,
+            dob
         )
         
         bmi = calculate_bmi(data.weight, data.height)

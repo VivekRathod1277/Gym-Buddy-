@@ -13,6 +13,11 @@ COMPLETED (remove when archiving):
         [x] Bug 5: Fixed Block-scoped variable 'addToast' hoisted above toggleCamera (WorkoutPage.tsx)
         [x] Bug 6: Changed container heights to 100dvh for mobile viewport fit and added overflow scroll (TrainerPage.tsx, WorkoutPage.tsx)
         [x] Bug 7: Added Flip Camera button to setup step and fixed mirroring logic (PositioningStep.tsx)
+  [x] Diet Integration & Home Dashboard:
+        [x] Migrated AI Fitness Logic (BMR/TDEE calculation, meal/workout generation) to FastAPI.
+        [x] Created Dashboard landing page replacing direct trainer access.
+        [x] Implemented Profile Management (mobile_no, DOB, BMI calculation).
+        [x] Added PDF Download using FPDF.
 
 PENDING:
   [ ] Step 18: Add weight + notes columns to exercise_sessions table

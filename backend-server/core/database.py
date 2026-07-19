@@ -41,7 +41,9 @@ def init_db():
             height REAL DEFAULT NULL,
             weight REAL DEFAULT NULL,
             activity REAL DEFAULT NULL,
-            diet_type TEXT DEFAULT NULL
+            diet_type TEXT DEFAULT NULL,
+            mobile_no TEXT DEFAULT NULL,
+            date_of_birth TEXT DEFAULT NULL
         )
     ''')
 
@@ -83,7 +85,9 @@ def init_db():
                           ("height", "REAL DEFAULT NULL"),
                           ("weight", "REAL DEFAULT NULL"),
                           ("activity", "REAL DEFAULT NULL"),
-                          ("diet_type", "TEXT DEFAULT NULL")]:
+                          ("diet_type", "TEXT DEFAULT NULL"),
+                          ("mobile_no", "TEXT DEFAULT NULL"),
+                          ("date_of_birth", "TEXT DEFAULT NULL")]:
         try:
             cursor.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError:
@@ -149,33 +153,44 @@ def update_user_name(user_id: int, name: str) -> bool:
 def get_user_profile(user_id: int) -> dict | None:
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT age, gender, height, weight, activity, diet_type FROM users WHERE id = ?", (user_id,))
+    cursor.execute("""
+        SELECT email, age, gender, height, weight, activity, diet_type, mobile_no, date_of_birth 
+        FROM users WHERE id = ?
+    """, (user_id,))
     row = cursor.fetchone()
     conn.close()
     if not row:
         return None
     return {
-        "age": row[0],
-        "gender": row[1],
-        "height": row[2],
-        "weight": row[3],
-        "activity": row[4],
-        "diet_type": row[5]
+        "email": row[0],
+        "age": row[1],
+        "gender": row[2],
+        "height": row[3],
+        "weight": row[4],
+        "activity": row[5],
+        "diet_type": row[6],
+        "mobile_no": row[7],
+        "date_of_birth": row[8]
     }
 
 
-def update_user_profile(user_id: int, age: int, gender: str, height: float, weight: float, activity: float, diet_type: str) -> bool:
+def update_user_profile(user_id: int, email: str, age: int, gender: str, height: float, weight: float, activity: float, diet_type: str, mobile_no: str, date_of_birth: str) -> bool:
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute('''
-        UPDATE users 
-        SET age = ?, gender = ?, height = ?, weight = ?, activity = ?, diet_type = ? 
-        WHERE id = ?
-    ''', (age, gender, height, weight, activity, diet_type, user_id))
-    conn.commit()
-    affected = cursor.rowcount
-    conn.close()
-    return affected > 0
+    try:
+        cursor.execute('''
+            UPDATE users 
+            SET email = ?, age = ?, gender = ?, height = ?, weight = ?, activity = ?, diet_type = ?, mobile_no = ?, date_of_birth = ?
+            WHERE id = ?
+        ''', (email, age, gender, height, weight, activity, diet_type, mobile_no, date_of_birth, user_id))
+        conn.commit()
+        affected = cursor.rowcount
+        return affected > 0
+    except sqlite3.IntegrityError:
+        # Email might already exist for another user
+        return False
+    finally:
+        conn.close()
 
 
 
