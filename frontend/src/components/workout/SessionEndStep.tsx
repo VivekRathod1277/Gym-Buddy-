@@ -53,7 +53,7 @@ export default function SessionEndStep({ exercise, sets, totalDuration, onNewWor
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+    <div className="flex-1 flex flex-col items-center py-12 px-6 text-center w-full max-w-4xl mx-auto">
       {/* Trophy icon */}
       <div
         className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
@@ -147,10 +147,10 @@ export default function SessionEndStep({ exercise, sets, totalDuration, onNewWor
       )}
 
       {/* Action buttons */}
-      <div className="flex flex-col gap-3 w-full max-w-[400px]">
+      <div className="flex flex-col gap-3 w-full max-w-[400px] mt-4 mb-8">
         <button
           onClick={onNewWorkout}
-          className="gradient-btn w-full py-4 flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-xl font-orbitron font-bold text-lg tracking-widest text-black transition-all bg-[#00d4ff] hover:bg-[#00e5ff] shadow-[0_0_15px_rgba(0,212,255,0.4)] hover:shadow-[0_0_25px_rgba(0,212,255,0.6)] flex items-center justify-center gap-2"
         >
           <span className="text-lg">🔄</span>
           NEW WORKOUT
@@ -158,7 +158,7 @@ export default function SessionEndStep({ exercise, sets, totalDuration, onNewWor
 
         <button
           onClick={() => navigate('/history')}
-          className="w-full py-4 rounded-lg font-orbitron font-semibold text-sm tracking-[2px] uppercase transition-all duration-200 hover:bg-[rgba(0,212,255,0.08)]"
+          className="w-full py-4 rounded-xl font-orbitron font-semibold text-sm tracking-[2px] uppercase transition-all duration-200 hover:bg-[rgba(0,212,255,0.08)]"
           style={{ background: 'transparent', border: '1px solid rgba(0, 212, 255, 0.3)', color: '#00d4ff' }}
         >
           VIEW HISTORY
