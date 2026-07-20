@@ -15,6 +15,9 @@ from core.database import (
     update_user_profile,
     save_fitness_record,
     get_fitness_history,
+    save_diet_routine,
+    save_workout_routine,
+    save_workout_exercise,
 )
 
 router = APIRouter(prefix="/api/diet", tags=["diet"])
@@ -476,6 +479,38 @@ def generate_plan(data: GeneratePlanRequest, current_user: TokenData = Depends(g
             goal=data.goal.capitalize(),
             plan_json=json.dumps(results)
         )
+
+        # Save Diet & Workout Routines
+        for day_name, diet in results['weekly_diet'].items():
+            save_diet_routine(
+                user_id=current_user.user_id,
+                day_name=day_name,
+                breakfast=diet.get('breakfast', ''),
+                lunch=diet.get('lunch', ''),
+                dinner=diet.get('dinner', ''),
+                tip=diet.get('tip', '')
+            )
+            
+        for day_name, workout in results['weekly_workout'].items():
+            workout_routine_id = save_workout_routine(
+                user_id=current_user.user_id,
+                day_name=day_name,
+                workout_type=workout.get('type', ''),
+                focus=workout.get('focus', ''),
+                duration=workout.get('duration', ''),
+                color=workout.get('color', '')
+            )
+            
+            if workout_routine_id:
+                for ex in workout.get('exercises', []):
+                    save_workout_exercise(
+                        workout_routine_id=workout_routine_id,
+                        name=ex.get('name', ''),
+                        sets=ex.get('sets', 0),
+                        reps=ex.get('reps', ''),
+                        rest=ex.get('rest', ''),
+                        notes=ex.get('notes', '')
+                    )
 
         return results
     except Exception as e:

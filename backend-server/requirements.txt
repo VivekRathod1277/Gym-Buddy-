@@ -13,3 +13,4 @@ python-multipart
 email-validator
 websockets
 fpdf
+supabase
