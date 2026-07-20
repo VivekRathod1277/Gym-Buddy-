@@ -190,21 +190,7 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
             playsInline
             muted
             autoPlay
-            style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
           />
-
-          {/* Flip Camera Button */}
-          <button
-            onClick={toggleCamera}
-            className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-lg font-inter text-xs font-semibold tracking-wider uppercase flex items-center gap-1 transition-all hover:bg-white/10"
-            style={{
-              background: 'rgba(0, 0, 0, 0.7)',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            }}
-          >
-            <span>🔄</span> FLIP
-          </button>
 
           {/* Countdown overlay */}
           {readyCountdown !== null && (
