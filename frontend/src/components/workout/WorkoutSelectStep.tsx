@@ -52,8 +52,8 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
 
   // Auto-scroll chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [messages, negotiating]);
 
   const handleNegotiate = async () => {
     if (!userInput.trim() || negotiating) return;
