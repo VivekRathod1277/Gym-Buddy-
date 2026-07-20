@@ -126,10 +126,8 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
 
       {/* Chat conversation */}
       <div
-        className="flex-1 overflow-y-auto p-4 rounded-xl space-y-3"
+        className="flex-1 overflow-y-auto p-4 space-y-3 neo-inset scrollbar-custom"
         style={{
-          background: 'rgba(10, 10, 20, 0.5)',
-          border: '1px solid rgba(0, 212, 255, 0.1)',
           minHeight: '200px',
           maxHeight: '300px',
         }}
@@ -163,14 +161,12 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
               <span className="text-sm">{msg.role === 'ai' ? '🤖' : '🏃'}</span>
             </div>
             <div
-              className="px-4 py-2.5 rounded-xl max-w-[80%] font-inter text-sm"
+              className={`px-4 py-2.5 rounded-xl max-w-[80%] font-inter text-sm ${msg.role === 'ai' ? 'neo-card' : 'neo-inset'}`}
               style={{
-                background: msg.role === 'ai'
-                  ? 'rgba(0, 212, 255, 0.08)'
-                  : 'rgba(123, 47, 247, 0.12)',
                 color: '#e0e0e0',
                 borderBottomLeftRadius: msg.role === 'ai' ? '4px' : '16px',
                 borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
+                border: `1px solid ${msg.role === 'ai' ? 'rgba(0, 212, 255, 0.15)' : 'rgba(123, 47, 247, 0.15)'}`,
               }}
             >
               {msg.text}
@@ -244,17 +240,11 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
                 speak(`Sure, let's do ${displayName}!`);
               }).finally(() => setNegotiating(false));
             }}
-            className="p-2 rounded-lg text-center transition-all duration-200 hover:scale-105"
+            className={`p-3 rounded-xl text-center transition-all duration-200 ${selectedExercise === ex ? 'neo-inset' : 'neo-card hover:scale-105'}`}
             style={{
-              background: selectedExercise === ex
-                ? `${EXERCISE_COLORS[ex]}20`
-                : 'rgba(20, 20, 40, 0.5)',
               border: selectedExercise === ex
-                ? `2px solid ${EXERCISE_COLORS[ex]}60`
-                : '1px solid rgba(255, 255, 255, 0.06)',
-              boxShadow: selectedExercise === ex
-                ? `0 0 15px ${EXERCISE_COLORS[ex]}20`
-                : 'none',
+                ? `1px solid ${EXERCISE_COLORS[ex]}80`
+                : '1px solid rgba(255, 255, 255, 0.02)',
             }}
           >
             <div className="font-inter text-[10px] font-semibold tracking-wider uppercase"
