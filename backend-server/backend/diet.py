@@ -56,7 +56,7 @@ def calculate_bmr(weight: float, height: float, age: int, gender: str) -> float:
     else:
         return 10 * weight + 6.25 * height - 5 * age - 161
 
-def get_weekly_diet(goal: str, diet_type: str) -> dict:
+def get_weekly_diet(goal: str, diet_type: str, gender: str = 'Male') -> dict:
     options = {
         'fat loss': {
             'veg': {
@@ -94,12 +94,19 @@ def get_weekly_diet(goal: str, diet_type: str) -> dict:
             'lunch': random.choice(pool['lunch']),
             'dinner': random.choice(pool['dinner'])
         }
+        
+        # Add a gender-specific macro/micronutrient tip
+        if gender.lower() == 'female':
+            weekly_plan[f"Day {i}"]['tip'] = "Include iron-rich greens like spinach and Vitamin C for absorption."
+        else:
+            weekly_plan[f"Day {i}"]['tip'] = "Focus on lean protein density to preserve muscle mass."
+            
     return weekly_plan
 
 def _ex(name: str, sets: int, reps: str, rest: str, notes: str='') -> dict:
     return {'name': name, 'sets': sets, 'reps': reps, 'rest': rest, 'notes': notes}
 
-def get_weekly_workout(goal: str) -> dict:
+def get_weekly_workout(goal: str, gender: str = 'Male') -> dict:
     if goal.lower() == 'fat loss':
         plans = {
             'Day 1': {
@@ -145,6 +152,12 @@ def get_weekly_workout(goal: str) -> dict:
             'Day 5': {
                 'type': 'Lower Body Strength', 'focus': 'Glutes, Quads, Hamstrings', 'duration': '45 min', 'color': '#6366f1',
                 'exercises': [
+                    _ex('Hip Thrusts / Glute Bridges', 4, '20 reps', '30s', 'Squeeze glutes at top, hold 1s'),
+                    _ex('Bodyweight Squats', 4, '20 reps', '45s', 'Knees track over toes, depth below parallel'),
+                    _ex('Reverse Lunges', 3, '12 each leg', '45s', 'Back knee hovers above floor'),
+                    _ex('Lateral Band Walks', 3, '15 each way', '45s', 'Great for glute medius activation'),
+                    _ex('Calf Raises', 3, '20 reps', '30s', 'Full extension at top, pause'),
+                ] if gender.lower() == 'female' else [
                     _ex('Bodyweight Squats', 4, '20 reps', '45s', 'Knees track over toes, depth below parallel'),
                     _ex('Reverse Lunges', 3, '12 each leg', '45s', 'Back knee hovers above floor'),
                     _ex('Glute Bridges', 4, '20 reps', '30s', 'Squeeze glutes at top, hold 1s'),
@@ -205,6 +218,12 @@ def get_weekly_workout(goal: str) -> dict:
             'Day 4': {
                 'type': 'Legs', 'focus': 'Quads, Hamstrings, Glutes, Calves', 'duration': '65 min', 'color': '#f97316',
                 'exercises': [
+                    _ex('Barbell Squat', 4, '8-10 reps', '120s', 'Depth below parallel, chest up, brace core'),
+                    _ex('Romanian Deadlift', 3, '10-12 reps', '90s', 'Hinge at hips, feel hamstring stretch'),
+                    _ex('Hip Thrusts', 4, '10-12 reps', '90s', 'Heavy load, focus on glute contraction'),
+                    _ex('Bulgarian Split Squats', 3, '10 each leg', '75s', 'Great for lower body symmetry'),
+                    _ex('Leg Curl', 3, '12-15 reps', '60s', 'Slow eccentric, squeeze at top'),
+                ] if gender.lower() == 'female' else [
                     _ex('Barbell Squat', 4, '8-10 reps', '120s', 'Depth below parallel, chest up, brace core'),
                     _ex('Romanian Deadlift', 3, '10-12 reps', '90s', 'Hinge at hips, feel hamstring stretch'),
                     _ex('Leg Press', 3, '12-15 reps', '75s', 'Feet shoulder-width, full ROM'),
@@ -440,8 +459,8 @@ def generate_plan(data: GeneratePlanRequest, current_user: TokenData = Depends(g
             'protein': round((calories * 0.3) / 4),
             'carbs': round((calories * 0.45) / 4),
             'fats': round((calories * 0.25) / 9),
-            'weekly_diet': get_weekly_diet(data.goal, data.diet_type),
-            'weekly_workout': get_weekly_workout(data.goal),
+            'weekly_diet': get_weekly_diet(data.goal, data.diet_type, data.gender),
+            'weekly_workout': get_weekly_workout(data.goal, data.gender),
             'goal': data.goal.capitalize(),
             'weight': data.weight,
             'height': data.height
