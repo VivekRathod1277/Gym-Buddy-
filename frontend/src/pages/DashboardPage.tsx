@@ -94,7 +94,7 @@ export default function DashboardPage() {
         {/* Left Column - Features */}
         <div className="flex-1 space-y-6">
           <div 
-            onClick={() => navigate('/trainer')}
+            onClick={() => navigate('/workout')}
             className="neo-card p-6 md:p-8 cursor-pointer hover:border-[#00d4ff]/50 hover:bg-white/5 transition-all group relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#00d4ff]/10 rounded-full blur-3xl group-hover:bg-[#00d4ff]/20 transition-all"></div>
