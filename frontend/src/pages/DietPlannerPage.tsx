@@ -175,6 +175,8 @@ export default function DietPlannerPage() {
               >
                 <option value="Veg">Vegetarian</option>
                 <option value="Eggitarian">Eggitarian</option>
+                <option value="Non-Veg">Non-Vegetarian</option>
+                <option value="Vegan">Vegan</option>
               </select>
             </div>
 

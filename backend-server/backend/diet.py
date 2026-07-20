@@ -69,8 +69,18 @@ def get_weekly_diet(goal: str, diet_type: str, gender: str = 'Male') -> dict:
             },
             'eggitarian': {
                 'breakfast': ['Boiled Eggs & Toast', 'Egg White Omelet', 'Scrambled Eggs with Spinach', 'Protein Pancakes', 'Poached Eggs on Rye'],
-                'lunch': ['Grilled Chicken Salad', 'Egg Curry (Light)', 'Tuna/Egg Wrap', 'Baked Fish with Greens', 'Turkey Breast Sandwich'],
-                'dinner': ['Chicken Stir-fry', 'Omelet with Veggies', 'Grilled Chicken & Broccoli', 'Egg Bhurji (No Butter)', 'Salmon with Asparagus']
+                'lunch': ['Egg Curry (Light)', 'Egg Salad Wrap', 'Lentil Soup with Boiled Eggs', 'Soya Chunks with Egg Bhurji', 'Quinoa & Egg Bowl'],
+                'dinner': ['Omelet with Veggies', 'Egg Bhurji (No Butter)', 'Boiled Eggs with Roasted Veggies', 'Egg Clear Soup', 'Mushroom & Egg Sauté']
+            },
+            'non-veg': {
+                'breakfast': ['Boiled Eggs & Toast', 'Chicken Sausage & Eggs', 'Scrambled Eggs with Spinach', 'Protein Pancakes', 'Turkey Bacon & Eggs'],
+                'lunch': ['Grilled Chicken Salad', 'Chicken Tikka Wrap', 'Tuna Salad', 'Baked Fish with Greens', 'Turkey Breast Sandwich'],
+                'dinner': ['Chicken Stir-fry', 'Grilled Chicken & Broccoli', 'Salmon with Asparagus', 'Lean Beef Stir-fry', 'Baked Tilapia']
+            },
+            'vegan': {
+                'breakfast': ['Oats with Almond Milk', 'Tofu Scramble', 'Green Smoothie Bowl', 'Vegan Protein Pancakes', 'Chia Seed Pudding'],
+                'lunch': ['Lentil & Quinoa Bowl', 'Chickpea Salad Wrap', 'Vegan Buddha Bowl', 'Soya Chunks Stir-fry', 'Black Bean Salad'],
+                'dinner': ['Roasted Vegetables & Tofu', 'Vegan Dal Soup', 'Zucchini Noodles with Pesto', 'Mushroom Sauté', 'Stuffed Bell Peppers']
             }
         },
         'muscle gain': {
@@ -80,9 +90,41 @@ def get_weekly_diet(goal: str, diet_type: str, gender: str = 'Male') -> dict:
                 'dinner': ['Paneer Bhurji & Roti', 'Lentil Pasta', 'Tofu & Veggie Stir-fry', 'Stuffed Mushrooms & Paneer', 'Vegetable Stew & Bread']
             },
             'eggitarian': {
-                'breakfast': ['Whole Eggs Omelet (3-4 eggs)', 'Chicken Sausage & Eggs', 'French Toast with Honey', 'Egg & Cheese Sandwich', 'Protein Oats with Egg Whites'],
-                'lunch': ['Chicken Breast & Rice', 'Egg Fried Rice (High Protein)', 'Beef/Chicken Burrito', 'Grilled Fish & Sweet Potato', 'Lamb Chops & Veggies'],
-                'dinner': ['Steak & Mashed Potatoes', 'Chicken Pasta', 'Grilled Salmon & Rice', 'Scrambled Eggs & Avocado Toast', 'Turkey Burger (No Bun)']
+                'breakfast': ['Whole Eggs Omelet (3-4 eggs)', 'Protein Smoothie with Eggs', 'French Toast with Honey', 'Egg & Cheese Sandwich', 'Protein Oats with Egg Whites'],
+                'lunch': ['Egg Curry & Rice', 'Egg Fried Rice (High Protein)', 'Boiled Eggs & Quinoa', 'Lentil Curry with Eggs', 'Rajma & Egg Bowl'],
+                'dinner': ['Egg Bhurji & Roti', 'Lentil Pasta with Boiled Eggs', 'Scrambled Eggs & Avocado Toast', 'Stuffed Mushrooms & Eggs', 'Vegetable Stew & Eggs']
+            },
+            'non-veg': {
+                'breakfast': ['Whole Eggs Omelet (3-4 eggs)', 'Chicken Sausage & Eggs', 'Beef Hash & Eggs', 'Egg & Turkey Bacon Sandwich', 'Protein Oats with Egg Whites'],
+                'lunch': ['Chicken Breast & Rice', 'Chicken Fried Rice (High Protein)', 'Beef Burrito', 'Grilled Fish & Sweet Potato', 'Lamb Chops & Veggies'],
+                'dinner': ['Steak & Mashed Potatoes', 'Chicken Pasta', 'Grilled Salmon & Rice', 'Turkey Burger (No Bun)', 'Lean Pork Chops & Veggies']
+            },
+            'vegan': {
+                'breakfast': ['Vegan Protein Smoothie', 'Tofu Scramble & Toast', 'Peanut Butter Oats', 'Chickpea Flour Chilla', 'Tempeh Bacon & Beans'],
+                'lunch': ['Lentil Curry & Quinoa', 'Tofu & Broccoli Stir-fry', 'Soya Chunk Pulao', 'Vegan Meatballs & Pasta', 'Black Bean & Corn Bowl'],
+                'dinner': ['Vegan Mac & Cheese', 'Seitan Stir-fry', 'Tempeh & Veggie Skewers', 'Stuffed Sweet Potatoes', 'Hearty Veg & Bean Stew']
+            }
+        },
+        'maintenance': {
+            'veg': {
+                'breakfast': ['Poha with Peanuts', 'Vegetable Upma', 'Fruit & Yogurt Parfait', 'Aloo Paratha (Light Oil)', 'Idli with Sambar'],
+                'lunch': ['Roti, Dal, and Mixed Veg', 'Veg Pulao with Raita', 'Paneer Wrap', 'Chhole & Rice', 'Kadhi Pakora & Rice'],
+                'dinner': ['Vegetable Khichdi', 'Roti with Sabzi', 'Dal Soup with Toast', 'Mixed Veg Salad', 'Grilled Paneer Salad']
+            },
+            'eggitarian': {
+                'breakfast': ['Egg Sandwich', 'Boiled Eggs with Fruit', 'Masala Omelet', 'French Toast', 'Poha with Boiled Eggs'],
+                'lunch': ['Egg Curry & Roti', 'Egg Fried Rice', 'Boiled Egg Salad', 'Dal & Rice with Eggs', 'Egg Bhurji & Toast'],
+                'dinner': ['Egg Wrap', 'Scrambled Eggs & Veggies', 'Egg & Noodle Soup', 'Roti with Egg Curry', 'Boiled Eggs & Salad']
+            },
+            'non-veg': {
+                'breakfast': ['Chicken Sausage & Toast', 'Egg Sandwich', 'Bacon & Eggs', 'Chicken Wrap', 'Turkey & Cheese Croissant'],
+                'lunch': ['Chicken Curry & Rice', 'Fish Tikka & Roti', 'Chicken Salad', 'Beef Stir-fry & Noodles', 'Turkey Sandwich'],
+                'dinner': ['Grilled Chicken & Veggies', 'Fish Curry & Rice', 'Chicken Soup & Toast', 'Roast Chicken', 'Steak & Salad']
+            },
+            'vegan': {
+                'breakfast': ['Vegan Banana Bread', 'Oatmeal with Fruits', 'Vegan Smoothie', 'Tofu Sandwich', 'Vegan Pancakes'],
+                'lunch': ['Vegan Wrap', 'Quinoa & Veggies', 'Lentil Soup & Bread', 'Vegan Pasta', 'Chickpea Salad'],
+                'dinner': ['Vegan Burger', 'Tofu Stir-fry', 'Vegetable Curry & Rice', 'Vegan Pizza (No Cheese)', 'Roasted Veggies & Hummus']
             }
         }
     }
