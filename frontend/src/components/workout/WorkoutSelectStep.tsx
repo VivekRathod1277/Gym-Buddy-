@@ -90,7 +90,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
   const exercises = ['pushup', 'pullup', 'squat', 'bicep_curl', 'chest_press'];
 
   return (
-    <div className="flex-1 flex flex-col p-4 md:p-8 gap-6" style={{ maxHeight: '100%' }}>
+    <div className="flex-1 flex flex-col p-4 md:p-8 gap-6 w-full max-w-4xl mx-auto">
       {/* Header */}
       <div className="text-center">
         <h2 className="font-orbitron font-bold text-lg tracking-[2px] text-[#e0e0e0] uppercase mb-1">
@@ -203,13 +203,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
         <button
           onClick={handleNegotiate}
           disabled={!userInput.trim() || negotiating || loading}
-          className="px-4 py-2 rounded-lg font-orbitron font-semibold text-xs tracking-wider"
-          style={{
-            background: 'rgba(0, 212, 255, 0.15)',
-            color: '#00d4ff',
-            border: '1px solid rgba(0, 212, 255, 0.3)',
-            opacity: !userInput.trim() || negotiating ? 0.5 : 1,
-          }}
+          className="px-6 py-2 rounded-xl font-orbitron font-bold text-xs tracking-wider text-black transition-all bg-[#00d4ff] hover:bg-[#00e5ff] shadow-[0_0_15px_rgba(0,212,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           SEND
         </button>
@@ -263,8 +257,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
       <button
         onClick={handleConfirm}
         disabled={!selectedExercise || loading}
-        className="gradient-btn w-full py-4 flex items-center justify-center gap-2"
-        style={{ opacity: !selectedExercise || loading ? 0.5 : 1 }}
+        className="w-full py-4 mt-4 rounded-xl font-orbitron font-bold text-lg tracking-widest text-black transition-all bg-[#00d4ff] hover:bg-[#00e5ff] shadow-[0_0_15px_rgba(0,212,255,0.4)] hover:shadow-[0_0_25px_rgba(0,212,255,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         <span className="text-lg">🎯</span>
         START {selectedExercise ? EXERCISE_DISPLAY_NAMES[selectedExercise]?.toUpperCase() : 'WORKOUT'}
