@@ -87,11 +87,11 @@ export default function TrainerPage() {
   const totalDuration = sessionStartTime ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#242730] relative overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-[#0a0a0f] relative overflow-hidden">
       {/* Dynamic background effects */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-[#00d4ff] to-transparent opacity-[0.02] pointer-events-none" />
-      <div className="absolute top-[-150px] right-[-150px] w-[400px] h-[400px] bg-[#7b2ff7] rounded-full blur-[150px] opacity-[0.05] pointer-events-none" />
-      <div className="absolute bottom-[-150px] left-[-150px] w-[400px] h-[400px] bg-[#00ff88] rounded-full blur-[150px] opacity-[0.05] pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-[#00d4ff] to-transparent opacity-5 pointer-events-none" />
+      <div className="absolute top-[-150px] right-[-150px] w-[400px] h-[400px] bg-[#7b2ff7] rounded-full blur-[150px] opacity-10 pointer-events-none" />
+      <div className="absolute bottom-[-150px] left-[-150px] w-[400px] h-[400px] bg-[#00ff88] rounded-full blur-[150px] opacity-10 pointer-events-none" />
 
       {/* Name Prompt Modal (Only shows if user has no name) */}
       {!user.name && (

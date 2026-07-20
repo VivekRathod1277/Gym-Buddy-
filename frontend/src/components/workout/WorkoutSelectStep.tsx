@@ -126,8 +126,10 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
 
       {/* Chat conversation */}
       <div
-        className="flex-1 overflow-y-auto p-4 space-y-3 neo-inset scrollbar-custom"
+        className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-custom rounded-xl"
         style={{
+          background: 'rgba(10, 10, 20, 0.5)',
+          border: '1px solid rgba(0, 212, 255, 0.1)',
           minHeight: '200px',
           maxHeight: '300px',
         }}
@@ -161,9 +163,10 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
               <span className="text-sm">{msg.role === 'ai' ? '🤖' : '🏃'}</span>
             </div>
             <div
-              className={`px-4 py-2.5 rounded-xl max-w-[80%] font-inter text-sm ${msg.role === 'ai' ? 'neo-card' : 'neo-inset'}`}
+              className={`px-4 py-2.5 rounded-xl max-w-[80%] font-inter text-sm`}
               style={{
                 color: '#e0e0e0',
+                background: msg.role === 'ai' ? 'rgba(0, 212, 255, 0.05)' : 'rgba(123, 47, 247, 0.05)',
                 borderBottomLeftRadius: msg.role === 'ai' ? '4px' : '16px',
                 borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
                 border: `1px solid ${msg.role === 'ai' ? 'rgba(0, 212, 255, 0.15)' : 'rgba(123, 47, 247, 0.15)'}`,
@@ -197,13 +200,24 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
           onChange={e => setUserInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleNegotiate()}
           placeholder="e.g., I want to train back instead..."
-          className="input-field flex-1"
+          className="flex-1 px-4 py-3 rounded-xl font-inter text-sm text-[#e0e0e0] focus:outline-none transition-all"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.2)'
+          }}
           disabled={negotiating || loading}
         />
         <button
           onClick={handleNegotiate}
           disabled={!userInput.trim() || negotiating || loading}
-          className="px-6 py-2 rounded-xl font-orbitron font-bold text-xs tracking-wider text-black transition-all bg-[#00d4ff] hover:bg-[#00e5ff] shadow-[0_0_15px_rgba(0,212,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 rounded-xl font-orbitron font-semibold text-xs tracking-wider transition-all"
+          style={{
+            background: 'rgba(0, 212, 255, 0.15)',
+            color: '#00d4ff',
+            border: '1px solid rgba(0, 212, 255, 0.3)',
+            opacity: !userInput.trim() || negotiating ? 0.5 : 1,
+          }}
         >
           SEND
         </button>
@@ -234,11 +248,17 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
                 speak(`Sure, let's do ${displayName}!`);
               }).finally(() => setNegotiating(false));
             }}
-            className={`p-3 rounded-xl text-center transition-all duration-200 ${selectedExercise === ex ? 'neo-inset' : 'neo-card hover:scale-105'}`}
+            className="p-3 rounded-xl text-center transition-all duration-200 hover:scale-105"
             style={{
+              background: selectedExercise === ex
+                ? `${EXERCISE_COLORS[ex]}20`
+                : 'rgba(20, 20, 40, 0.5)',
               border: selectedExercise === ex
                 ? `1px solid ${EXERCISE_COLORS[ex]}80`
-                : '1px solid rgba(255, 255, 255, 0.02)',
+                : '1px solid rgba(255, 255, 255, 0.05)',
+              boxShadow: selectedExercise === ex
+                ? `0 0 15px ${EXERCISE_COLORS[ex]}20`
+                : 'none',
             }}
           >
             <div className="font-inter text-[10px] font-semibold tracking-wider uppercase"
@@ -257,7 +277,14 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
       <button
         onClick={handleConfirm}
         disabled={!selectedExercise || loading}
-        className="w-full py-4 mt-4 rounded-xl font-orbitron font-bold text-lg tracking-widest text-black transition-all bg-[#00d4ff] hover:bg-[#00e5ff] shadow-[0_0_15px_rgba(0,212,255,0.4)] hover:shadow-[0_0_25px_rgba(0,212,255,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-4 mt-4 rounded-xl font-orbitron font-bold text-lg tracking-widest transition-all flex items-center justify-center gap-2"
+        style={{ 
+          background: 'rgba(0, 212, 255, 0.1)',
+          color: '#00d4ff',
+          border: '1px solid rgba(0, 212, 255, 0.4)',
+          boxShadow: '0 0 20px rgba(0, 212, 255, 0.2)',
+          opacity: !selectedExercise || loading ? 0.5 : 1 
+        }}
       >
         <span className="text-lg">🎯</span>
         START {selectedExercise ? EXERCISE_DISPLAY_NAMES[selectedExercise]?.toUpperCase() : 'WORKOUT'}
