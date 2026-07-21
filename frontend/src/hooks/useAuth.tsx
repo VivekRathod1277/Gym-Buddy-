@@ -7,6 +7,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  updateName: (name: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({
         id: response.data.user_id,
         email: response.data.email,
+        name: response.data.name || undefined,
       });
     } catch (error) {
       console.error('Failed to fetch profile', error);
@@ -74,8 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateName = useCallback(async (name: string): Promise<boolean> => {
+    try {
+      await api.put('/coach/profile', { name });
+      setUser(prev => prev ? { ...prev, name } : null);
+      return true;
+    } catch (error) {
+      console.error('Failed to update name', error);
+      return false;
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateName, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -41,8 +41,8 @@
 | **Pose Estimation** | Google MediaPipe | Extracts 33 body landmarks (x, y, z, visibility) from every video frame |
 | **Biomechanical Analysis** | Custom Physics Engine | Counts reps via a state machine, detects form faults using JSON-defined rules |
 | **ML Classification** | Random Forest (scikit-learn) | Classifies posture quality (good form, bad form variants, rest) |
-| **AI Coaching** | NVIDIA NIM (DeepSeek-V4-Pro) | Vision-based contextual coaching tips and automatic exercise detection |
-| **Voice Feedback** | pyttsx3 (SAPI5) | Real-time spoken rep counts, fault alerts, and AI coaching tips |
+| **AI Advisor & Trainer** | NVIDIA NIM (DeepSeek-V4-Pro) | Vision-based contextual coaching tips, auto-exercise detection, and conversational AI trainer flow (greetings, set summaries, negotiation) |
+| **Voice Feedback** | Browser Web Speech API & pyttsx3 | Real-time spoken rep counts, fault alerts, and interactive AI trainer dialog |
 
 ### Supported Exercises
 
@@ -58,36 +58,36 @@
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                        FRONTEND (React + Vite)                   │
-│  ┌─────────┐  ┌──────────────┐  ┌──────────────┐                │
-│  │AuthPage │  │ WorkoutPage  │  │ HistoryPage  │                │
-│  └────┬────┘  └──────┬───────┘  └──────┬───────┘                │
-│       │              │ WebSocket        │ REST                   │
-│       │              │ (live frames)    │                        │
-└───────┼──────────────┼──────────────────┼────────────────────────┘
-        │              │                  │
-   ┌────▼──────────────▼──────────────────▼────────────────────────┐
+│  ┌─────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐│
+│  │AuthPage │  │ TrainerPage  │  │ WorkoutPage  │  │HistoryPage ││
+│  └────┬────┘  └──────┬───────┘  └──────┬───────┘  └──────┬─────┘│
+│       │              │ Voice / WS      │ WebSocket       │ REST │
+│       │              │ & REST          │ (live frames)   │      │
+└───────┼──────────────┼─────────────────┼─────────────────┼──────┘
+        │              │                 │                 │
+   ┌────▼──────────────▼─────────────────▼─────────────────▼───────┐
    │                   BACKEND (FastAPI + Uvicorn)                 │
    │                                                               │
-   │  ┌──────────┐  ┌────────────┐  ┌──────────────┐              │
-   │  │ auth.py  │  │ workout.py │  │ sessions.py  │              │
-   │  │ (JWT)    │  │ (REST+WS)  │  │ (CRUD)       │              │
-   │  └──────────┘  └─────┬──────┘  └──────────────┘              │
-   │                       │                                       │
-   │         ┌─────────────┼──────────────────┐                    │
-   │         ▼             ▼                  ▼                    │
-   │  ┌────────────┐ ┌──────────────┐ ┌──────────────┐            │
-   │  │  Physics   │ │  ML Model    │ │  AI Advisor  │            │
-   │  │  Engine    │ │  (sklearn)   │ │ (NVIDIA NIM) │            │
-   │  └─────┬──────┘ └──────────────┘ └──────────────┘            │
-   │        │                                                      │
-   │  ┌─────▼──────┐                                               │
-   │  │  MediaPipe  │  (Pose Landmark Detection)                   │
-   │  └────────────┘                                               │
+   │  ┌────────┐  ┌────────────┐  ┌────────────┐  ┌──────────────┐ │
+   │  │auth.py │  │ coach.py   │  │ workout.py │  │ sessions.py  │ │
+   │  │(JWT)   │  │(AI Trainer)│  │ (REST+WS)  │  │ (CRUD)       │ │
+   │  └────────┘  └─────┬──────┘  └─────┬──────┘  └──────────────┘ │
+   │                    │               │                          │
+   │      ┌─────────────┼───────────────┼──────────────────┐       │
+   │      ▼             ▼               ▼                  ▼       │
+   │ ┌────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
+   │ │  Physics   │ │  ai_coach.py │ │  ML Model    │ │ ai_advisor│ │
+   │ │  Engine    │ │ (DeepSeek)   │ │  (sklearn)   │ │ (NVIDIA) │ │
+   │ └─────┬──────┘ └──────────────┘ └──────────────┘ └──────────┘ │
+   │       │                                                       │
+   │ ┌─────▼──────┐                                                │
+   │ │  MediaPipe │  (Pose Landmark Detection)                     │
+   │ └────────────┘                                                │
    │                                                               │
-   │  ┌──────────────┐  ┌──────────────────┐                       │
-   │  │  SQLite DB   │  │  Voice Feedback  │                       │
-   │  │  (gym_ai.db) │  │  (pyttsx3/SAPI5) │                       │
-   │  └──────────────┘  └──────────────────┘                       │
+   │ ┌──────────────┐  ┌────────────────────────┐                  │
+   │ │  SQLite DB   │  │  Voice Feedback (Web/  │                  │
+   │ │  (gym_ai.db) │  │  pyttsx3 SAPI5)        │                  │
+   │ └──────────────┘  └────────────────────────┘                  │
    └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -313,25 +313,33 @@ If the trained model files are not found, the classifier falls back to a visibil
 
 ---
 
-### 5.3 AI Advisor (NVIDIA NIM)
+### 5.3 AI Advisor & Coach (NVIDIA NIM)
 
-**File:** `core/ai_advisor.py`  
-**Class:** `AIAdvisor`
+**Files:** `core/ai_advisor.py`, `core/ai_coach.py`  
+**Classes:** `AIAdvisor`, `AICoach`
 
-Integrates with NVIDIA's NIM API using the DeepSeek-V4-Pro model for two vision-based capabilities:
+Integrates with NVIDIA's NIM API using the DeepSeek-V4-Pro model for two main capabilities:
 
-#### 1. Frame Analysis (Coaching)
+#### 1. Frame Analysis (AI Advisor)
 
 - Sends a JPEG-encoded frame to DeepSeek-V4-Pro with a coaching prompt
 - Returns a single sentence of constructive posture feedback
 - Runs in a **background thread** to avoid blocking the main video loop
 - Uses a callback pattern: `analyze_frame(frame, exercise_name, callback)`
 
-#### 2. Exercise Detection
+#### 2. Conversational Flow (AI Coach)
+
+- Drives the conversational flow in the `TrainerPage` UI
+- **Greeting**: Generates a personalized greeting referencing last session's faults
+- **Workout Suggestion**: Analyzes rolling 7-day history to suggest under-trained muscle groups
+- **Negotiation**: Handles user overrides and adapts the workout naturally
+- **Positioning Cues**: Exercise-specific form checklists before starting a set
+- **Set Summary**: Provides motivational feedback based on reps hit and faults detected
+
+#### 3. Exercise Detection
 
 - Analyzes the first frame of a video to auto-detect the exercise type
 - Returns one of: `pushup`, `pullup`, `squat`, `bicep_curl`
-- Falls back to `pushup` on any error
 
 #### Configuration
 
@@ -341,6 +349,7 @@ Integrates with NVIDIA's NIM API using the DeepSeek-V4-Pro model for two vision-
 | Model | `deepseek-ai/deepseek-v4-pro` |
 | Coaching Temperature | 0.7 |
 | Detection Temperature | 0.2 |
+| Trainer Temperature | 0.5 - 0.8 (varies by prompt) |
 | Max Tokens (Coaching) | 128 |
 | Max Tokens (Detection) | 10 |
 
@@ -491,11 +500,17 @@ The workout router supports two processing modes:
 | `POST` | `/api/workout/analyze-frame` | ✓ | AI coaching for single frame |
 | `GET` | `/api/workout/exercises` | ✓ | List available exercises |
 | `POST` | `/api/workout/process-video` | ✓ | Upload video → task ID |
-| `WS` | `/api/workout/ws/stream-video/{id}` | ✗ | Live processed frame stream |
+| `WS` | `/api/workout/ws/live-stream` | ✗ | Live processed frame stream |
 | `GET` | `/api/workout/tasks/{id}` | ✓ | Check processing task status |
 | `GET` | `/api/workout/processed-videos/{file}` | ✗ | Download processed video |
 | `POST` | `/api/sessions` | ✓ | Save workout session |
 | `GET` | `/api/sessions/history` | ✓ | Get workout history |
+| `GET` | `/api/coach/greeting` | ✓ | Get personalized AI greeting |
+| `GET` | `/api/coach/suggest-workout` | ✓ | Get AI workout suggestion based on history |
+| `POST` | `/api/coach/negotiate` | ✓ | Negotiate workout with AI trainer |
+| `GET` | `/api/coach/positioning-tips` | ✓ | Get pre-set positioning cues |
+| `POST` | `/api/coach/set-summary` | ✓ | Get AI motivation and summary after a set |
+| `PUT` | `/api/coach/profile` | ✓ | Update user's name |
 
 ---
 
@@ -509,7 +524,8 @@ The workout router supports two processing modes:
 | Page | Route | Description |
 |---|---|---|
 | **AuthPage** | `/` | Login / Register with animated neural background |
-| **WorkoutPage** | `/workout` | Video upload, exercise selection, live WebSocket analysis with real-time HUD overlay |
+| **TrainerPage** | `/trainer` | AI-guided conversational workflow for live workouts (Greeting → Suggestion → Positioning → Exercising → Summary) |
+| **WorkoutPage** | `/workout` | Classic video upload, exercise selection, live WebSocket analysis with real-time HUD overlay |
 | **HistoryPage** | `/history` | Past workout sessions with stats and charts |
 
 ### Key Components
@@ -743,6 +759,7 @@ Store these in a `.env` file in the project root.
 | `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
 | `email` | TEXT | UNIQUE NOT NULL |
 | `password` | TEXT | NOT NULL (SHA-256 hash) |
+| `name` | TEXT | Optional user name for personalized AI greetings |
 
 ### `exercise_sessions` Table
 
@@ -753,6 +770,7 @@ Store these in a `.env` file in the project root.
 | `timestamp` | DATETIME | DEFAULT CURRENT_TIMESTAMP |
 | `exercise_name` | TEXT | — |
 | `total_reps` | INTEGER | — |
+| `duration_seconds` | INTEGER | DEFAULT 0 (Length of the session) |
 | `faults` | TEXT | Stringified list of fault names |
 | `ai_suggestion` | TEXT | Last AI coaching tip |
 

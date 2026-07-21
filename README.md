@@ -53,6 +53,46 @@
 
 ---
 
+## 🏗️ System Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (React + Vite)                   │
+│  ┌─────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐│
+│  │AuthPage │  │ TrainerPage  │  │ WorkoutPage  │  │HistoryPage ││
+│  └────┬────┘  └──────┬───────┘  └──────┬───────┘  └──────┬─────┘│
+│       │              │ Voice / WS      │ WebSocket       │ REST │
+│       │              │ & REST          │ (live frames)   │      │
+└───────┼──────────────┼─────────────────┼─────────────────┼──────┘
+        │              │                 │                 │
+   ┌────▼──────────────▼─────────────────▼─────────────────▼───────┐
+   │                   BACKEND (FastAPI + Uvicorn)                 │
+   │                                                               │
+   │  ┌────────┐  ┌────────────┐  ┌────────────┐  ┌──────────────┐ │
+   │  │auth.py │  │ coach.py   │  │ workout.py │  │ sessions.py  │ │
+   │  │(JWT)   │  │(AI Trainer)│  │ (REST+WS)  │  │ (CRUD)       │ │
+   │  └────────┘  └─────┬──────┘  └─────┬──────┘  └──────────────┘ │
+   │                    │               │                          │
+   │      ┌─────────────┼───────────────┼──────────────────┐       │
+   │      ▼             ▼               ▼                  ▼       │
+   │ ┌────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
+   │ │  Physics   │ │  ai_coach.py │ │  ML Model    │ │ ai_advisor│ │
+   │ │  Engine    │ │ (DeepSeek)   │ │  (sklearn)   │ │ (NVIDIA) │ │
+   │ └─────┬──────┘ └──────────────┘ └──────────────┘ └──────────┘ │
+   │       │                                                       │
+   │ ┌─────▼──────┐                                                │
+   │ │  MediaPipe │  (Pose Landmark Detection)                     │
+   │ └────────────┘                                                │
+   │                                                               │
+   │ ┌──────────────┐  ┌────────────────────────┐                  │
+   │ │  SQLite DB   │  │  Voice Feedback (Web/  │                  │
+   │ │  (gym_ai.db) │  │  pyttsx3 SAPI5)        │                  │
+   │ └──────────────┘  └────────────────────────┘                  │
+   └───────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 🗂️ Project Structure
 
 ```
@@ -285,6 +325,32 @@ Also configured for **Render** deployment via `backend-server/render.yaml`.
 **Backend:** `Python` · `FastAPI` · `Uvicorn` · `MediaPipe` · `OpenCV` · `scikit-learn` · `pyttsx3` · `SQLite` · `PyJWT` · `NVIDIA NIM`
 
 **Frontend:** `React 19` · `TypeScript` · `Vite 7` · `Tailwind CSS` · `Three.js` · `Recharts` · `Radix UI` · `Axios` · `Zod`
+
+---
+
+## 🗄️ Database Schema
+
+The app uses SQLite (`gym_ai.db`) for user management and session history.
+
+### `users` Table
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `email` | TEXT | UNIQUE NOT NULL |
+| `password` | TEXT | NOT NULL (SHA-256 hash) |
+| `name` | TEXT | Optional user name for AI greetings |
+
+### `exercise_sessions` Table
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT |
+| `user_id` | INTEGER | FOREIGN KEY → users(id) |
+| `timestamp` | DATETIME | DEFAULT CURRENT_TIMESTAMP |
+| `exercise_name` | TEXT | — |
+| `total_reps` | INTEGER | — |
+| `duration_seconds` | INTEGER | DEFAULT 0 |
+| `faults` | TEXT | Stringified list of faults |
+| `ai_suggestion` | TEXT | Last AI coaching tip |
 
 ---
 

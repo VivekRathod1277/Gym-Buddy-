@@ -9,6 +9,15 @@ COMPLETED (remove when archiving):
         [x] Bug 2: Add facingMode:'environment' to getUserMedia for rear camera (WorkoutPage.tsx)
         [x] Bug 3: Draw skeleton overlay on enhanced_frame, not original frame (workout.py)
         [x] Bug 4: Raise BRIGHTNESS_LOW_THRESHOLD 80→100 for phone HDR cameras (frame_enhancer.py)
+  [x] Mobile UI & Scope Bug Fixes (Bugs 5-7):
+        [x] Bug 5: Fixed Block-scoped variable 'addToast' hoisted above toggleCamera (WorkoutPage.tsx)
+        [x] Bug 6: Changed container heights to 100dvh for mobile viewport fit and added overflow scroll (TrainerPage.tsx, WorkoutPage.tsx)
+        [x] Bug 7: Added Flip Camera button to setup step and fixed mirroring logic (PositioningStep.tsx)
+  [x] Diet Integration & Home Dashboard:
+        [x] Migrated AI Fitness Logic (BMR/TDEE calculation, meal/workout generation) to FastAPI.
+        [x] Created Dashboard landing page replacing direct trainer access.
+        [x] Implemented Profile Management (mobile_no, DOB, BMI calculation).
+        [x] Added PDF Download using FPDF.
 
 PENDING:
   [ ] Step 18: Add weight + notes columns to exercise_sessions table

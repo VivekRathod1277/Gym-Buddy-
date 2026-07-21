@@ -122,5 +122,4 @@ def enhance_if_needed(frame: np.ndarray) -> tuple[np.ndarray, str]:
     # Low-light pipeline
     enhanced = _apply_clahe(frame)
     enhanced = _apply_gamma(enhanced, brightness)
-    enhanced = _apply_denoise(enhanced)
     return enhanced, "low_light"

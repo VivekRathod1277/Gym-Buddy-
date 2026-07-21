@@ -29,7 +29,44 @@ export default function WorkoutPage() {
   const [detectedExercise, setDetectedExercise] = useState<string | null>(null);
   const [webcamActive, setWebcamActive] = useState(false);
   const [lowPoseConfidence, setLowPoseConfidence] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(
+    (localStorage.getItem('cameraFacingMode') as 'user' | 'environment') || 'environment'
+  );
   const lowConfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { addSession } = useSessions();
+  const { speak } = useVoice();
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+
+  const toggleCamera = useCallback(async () => {
+    const newMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newMode);
+    localStorage.setItem('cameraFacingMode', newMode);
+    
+    if (streamRef.current && webcamActive) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: newMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 },
+          },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (err) {
+        console.error('Failed to flip camera:', err);
+        addToast('Failed to switch camera.', 'error');
+      }
+    }
+  }, [facingMode, webcamActive, addToast]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const faultTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,11 +76,6 @@ export default function WorkoutPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-
-  const { addSession } = useSessions();
-  const { speak } = useVoice();
-  const { addToast } = useToast();
-  const navigate = useNavigate();
 
   // Cleanup intervals on unmount
   useEffect(() => {
@@ -217,8 +249,7 @@ export default function WorkoutPage() {
           // receives a usable frame even in dim conditions
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
-              // Bug 2 fix: force rear camera on mobile — front camera gives portrait/mirrored frames
-              facingMode: { ideal: 'environment' },
+              facingMode: { ideal: localStorage.getItem('cameraFacingMode') || 'environment' },
               width: { ideal: 1280 },
               height: { ideal: 720 },
               frameRate: { ideal: 30 },
@@ -283,8 +314,8 @@ export default function WorkoutPage() {
                 // We auto-rotate portrait (h > w) 90° to landscape before sending.
                 // Landscape frames are ~4× smaller (less WebSocket latency) and
                 // MediaPipe BlazePose detects poses far more reliably on them.
-                // Bug 1 fix: MAX_WIDTH 320→640, JPEG quality 0.4→0.75
-                const MAX_WIDTH = 640;
+                // Bug 1 fix: MAX_WIDTH 320→480, JPEG quality 0.4→0.6 (compromise for speed)
+                const MAX_WIDTH = 480;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                   let w = video.videoWidth;
@@ -298,7 +329,7 @@ export default function WorkoutPage() {
                   canvas.width = w;
                   canvas.height = h;
                   ctx.drawImage(video, 0, 0, w, h);
-                  const b64 = canvas.toDataURL('image/jpeg', 0.75);
+                  const b64 = canvas.toDataURL('image/jpeg', 0.6);
                   isProcessingFrame = true;
                   ws.send(JSON.stringify({ frame: b64, exercise: exerciseType }));
                 }
@@ -473,10 +504,10 @@ export default function WorkoutPage() {
   const exerciseColor = EXERCISE_COLORS[effectiveExercise as ExerciseType] || '#00d4ff';
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#0a0a0f' }}>
+    <div className="min-h-[100dvh] flex" style={{ background: '#0a0a0f' }}>
       <Sidebar />
 
-      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-screen">
+      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-[100dvh]">
         {/* Page Header */}
         <div
           className="px-4 md:px-8 py-4 md:py-6"
@@ -617,7 +648,7 @@ export default function WorkoutPage() {
                 {webcamActive && status !== 'done' && !liveFrame && (
                   <video
                     ref={(el) => {
-                      if (el && streamRef.current) {
+                      if (el && streamRef.current && el.srcObject !== streamRef.current) {
                         el.srcObject = streamRef.current;
                         el.play().catch(() => {});
                       }
@@ -629,6 +660,7 @@ export default function WorkoutPage() {
                     autoPlay
                   />
                 )}
+
                 {/* Idle State */}
                 {status === 'idle' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -710,7 +742,12 @@ export default function WorkoutPage() {
 
                     {/* Raw Video Feed Background (webcam only, hidden during upload) */}
                     <video 
-                      ref={videoRef} 
+                      ref={(el) => {
+                        if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                          el.srcObject = streamRef.current;
+                          el.play().catch(() => {});
+                        }
+                      }}
                       className="absolute inset-0 w-full h-full object-contain rounded-xl z-0" 
                       style={{ transform: inputMode === 'webcam' ? 'scaleX(-1)' : 'none', opacity: inputMode === 'upload' ? 0 : 1 }}
                       muted 
@@ -787,7 +824,7 @@ export default function WorkoutPage() {
           </div>
 
           {/* Stats Row */}
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 mt-4 md:mt-0 flex-none">
+          <div className="grid grid-cols-2 md:flex md:flex-row gap-4 md:gap-6 mt-4 md:mt-0 flex-none">
             {/* Rep Counter */}
             <div className="neo-card flex-1 p-4 md:p-5 flex flex-col">
               <div className="flex items-end gap-2">
@@ -843,9 +880,21 @@ export default function WorkoutPage() {
                 </span>
               </div>
               <span className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mt-1">
-                STATUS
+                SYSTEM STATUS
               </span>
             </div>
+
+            {/* Flip Camera (Webcam only) */}
+            {inputMode === 'webcam' && (
+              <div className="neo-card flex-1 p-4 md:p-5 flex flex-col justify-center items-center cursor-pointer hover:bg-white/5 transition-colors" onClick={toggleCamera}>
+                <div className="flex items-end gap-2">
+                  <span className="font-orbitron font-bold text-4xl text-[#e0e0e0]">🔄</span>
+                </div>
+                <span className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mt-2">
+                  FLIP CAMERA
+                </span>
+              </div>
+            )}
           </div>
 
           {/* AI Advisor Panel */}

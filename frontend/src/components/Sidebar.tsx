@@ -1,12 +1,15 @@
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoice } from '@/hooks/useVoice';
+import { useState } from 'react';
+import ProfileModal from '@/components/ProfileModal';
 
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isMuted, toggleMute } = useVoice();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -54,6 +57,14 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex flex-row md:flex-col gap-2 md:gap-4 w-full md:flex-1 justify-around md:justify-start">
         <button
+          onClick={() => navigate('/dashboard')}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
+        >
+          <span className="text-xl md:text-lg">&#127968;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HOME</span>
+        </button>
+
+        <button
           onClick={() => navigate('/workout')}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
         >
@@ -67,6 +78,14 @@ export default function Sidebar() {
         >
           <span className="text-xl md:text-lg">&#128202;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HISTORY</span>
+        </button>
+
+        <button
+          onClick={() => navigate('/diet-planner')}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
+        >
+          <span className="text-xl md:text-lg">&#127822;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">DIET</span>
         </button>
 
         {/* Mute Toggle (Icon only on mobile, full text on desktop) */}
@@ -91,6 +110,15 @@ export default function Sidebar() {
         {/* Divider (Desktop Only) */}
         <div className="hidden md:block w-full h-px my-2 bg-white/5 neo-inset" />
 
+        {/* Profile */}
+        <button
+          onClick={() => setIsProfileOpen(true)}
+          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isProfileOpen ? 'active' : ''}`}
+        >
+          <span className="text-xl md:text-lg text-[#c084fc]">&#128100;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">PROFILE</span>
+        </button>
+
         {/* Logout */}
         <button
           onClick={logout}
@@ -100,6 +128,9 @@ export default function Sidebar() {
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">LOGOUT</span>
         </button>
       </nav>
+
+      {/* Profile Modal */}
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </aside>
   );
 }
