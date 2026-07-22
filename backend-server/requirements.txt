@@ -14,3 +14,4 @@ email-validator
 websockets
 fpdf
 supabase
+cloudinary

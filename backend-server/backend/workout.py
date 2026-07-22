@@ -21,6 +21,7 @@ from core.ai_advisor import AIAdvisor
 from core.physics_engine import PhysicsEngine
 from core.ml_model import ExerciseClassifier
 from core.frame_enhancer import enhance_if_needed, LOW_LIGHT_TRACKING_CONFIDENCE
+from core.cloudinary_helper import upload_video_to_cloudinary
 
 # ─── Pose factory (Step 10) ───────────────────────────────────────────────────
 # Single source of truth for MediaPipe Pose config so thresholds are never
@@ -497,6 +498,10 @@ def process_video_task(
             ai_suggestion=tip_text
         )
 
+        # Upload to Cloudinary
+        cloudinary_url = upload_video_to_cloudinary(output_path)
+        final_video_url = cloudinary_url if cloudinary_url else f"/api/workout/processed-videos/{os.path.basename(output_path)}"
+
         # Update final task status
         tasks[task_id]["status"] = "completed"
         tasks[task_id]["progress"] = 100.0
@@ -504,13 +509,15 @@ def process_video_task(
             "exercise": session_data["exercise"],
             "total_reps": session_data["total_reps"],
             "faults_recorded": session_data["faults_recorded"],
-            "processed_video_url": f"/api/workout/processed-videos/{os.path.basename(output_path)}",
+            "processed_video_url": final_video_url,
             "ai_suggestion": tip_text
         }
 
-        # Cleanup input file
+        # Cleanup input file and output file (if uploaded)
         if os.path.exists(input_path):
             os.remove(input_path)
+        if cloudinary_url and os.path.exists(output_path):
+            os.remove(output_path)
 
     except Exception as exc:
         tasks[task_id]["status"] = "failed"
@@ -598,6 +605,8 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
         tasks[task_id]["status"] = "failed"
         await websocket.send_json({"status": "failed", "error": "Could not open uploaded video file"})
         await websocket.close()
+        if os.path.exists(input_path):
+            os.remove(input_path)
         return
 
     print(f"[WS] Handling auto detect for {exercise_file}", flush=True)
@@ -626,6 +635,8 @@ async def stream_video_ws(websocket: WebSocket, task_id: str):
         await websocket.send_json({"status": "failed", "error": f"Exercise blueprint '{exercise_file}' not found. Check server logs for details."})
         cap.release()
         await websocket.close()
+        if os.path.exists(input_path):
+            os.remove(input_path)
         return
 
     engine = PhysicsEngine(blueprint_path)

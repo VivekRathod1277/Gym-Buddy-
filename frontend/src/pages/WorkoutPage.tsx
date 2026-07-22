@@ -781,7 +781,7 @@ export default function WorkoutPage() {
                 {/* Done State - Real Processed Video */}
                 {status === 'done' && processedVideoUrl && (
                   <video
-                    src={`${API_BASE}${processedVideoUrl}`}
+                    src={processedVideoUrl.startsWith('http') ? processedVideoUrl : `${API_BASE}${processedVideoUrl}`}
                     className="absolute inset-0 w-full h-full object-contain bg-black z-30"
                     autoPlay
                     controls
