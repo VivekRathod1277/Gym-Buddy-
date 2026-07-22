@@ -58,53 +58,55 @@ export default function Sidebar() {
       <nav className="flex flex-row md:flex-col gap-2 md:gap-4 w-full md:flex-1 justify-around md:justify-start">
         <button
           onClick={() => navigate('/dashboard')}
-          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#127968;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">HOME</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">&#127968;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">HOME</span>
         </button>
 
         <button
           onClick={() => navigate('/workout')}
-          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/workout') ? 'active' : ''}`}
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#127947;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">WORKOUT</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">&#127947;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">WORKOUT</span>
         </button>
 
         <button
           onClick={() => navigate('/history')}
-          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/history') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/history') ? 'active' : ''}`}
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#128202;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">HISTORY</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">&#128202;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">HISTORY</span>
         </button>
 
         <button
           onClick={() => navigate('/diet-planner')}
-          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#127822;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">DIET</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">&#127822;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">DIET</span>
         </button>
 
         {/* Mute Toggle (Icon only on mobile, full text on desktop) */}
         <button
           onClick={toggleMute}
-          className="sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px]"
+          className="sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3"
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block relative">
+          <span className="text-xl md:text-lg flex justify-center items-center relative">
             {isMuted ? '🔇' : '🔊'}
             {isMuted && (
               <span className="md:hidden absolute top-0 right-0 w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
             )}
           </span>
-          <span className="hidden md:inline font-bold tracking-wider text-[10px] md:text-sm text-left md:flex-1">
-            {isMuted ? 'UNMUTE' : 'MUTE'}
-          </span>
-          {isMuted && (
-            <span className="hidden md:block w-2 h-2 rounded-full bg-[#ff4d6d] ml-auto shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
-          )}
+          <div className="hidden md:flex w-full items-center justify-between">
+            <span className="font-bold tracking-wider text-sm text-left">
+              {isMuted ? 'UNMUTE' : 'MUTE'}
+            </span>
+            {isMuted && (
+              <span className="w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
+            )}
+          </div>
         </button>
 
         {/* Divider (Desktop Only) */}
@@ -113,19 +115,19 @@ export default function Sidebar() {
         {/* Profile */}
         <button
           onClick={() => setIsProfileOpen(true)}
-          className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isProfileOpen ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isProfileOpen ? 'active' : ''}`}
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block text-[#c084fc]">&#128100;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">PROFILE</span>
+          <span className="text-xl md:text-lg flex justify-center items-center text-[#c084fc]">&#128100;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">PROFILE</span>
         </button>
 
         {/* Logout */}
         <button
           onClick={logout}
-          className="sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] text-[#ff4d6d] hover:text-[#ff2a55]"
+          className="sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 text-[#ff4d6d] hover:text-[#ff2a55]"
         >
-          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#128682;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">LOGOUT</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">&#128682;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">LOGOUT</span>
         </button>
       </nav>
 
