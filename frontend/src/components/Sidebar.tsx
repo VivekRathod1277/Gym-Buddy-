@@ -33,9 +33,6 @@ export default function Sidebar() {
           </button>
           
           <div className="flex items-center gap-2">
-            <span className="text-xl text-[#00d4ff]" style={{ textShadow: '0 0 12px rgba(0, 212, 255, 0.6)' }}>
-              &#9889;
-            </span>
             <span className="font-orbitron font-bold text-sm md:text-base text-[#e0e0e0] tracking-[2px] uppercase">
               GYM BUDDY
             </span>
@@ -68,9 +65,6 @@ export default function Sidebar() {
         {/* Brand */}
         <div className="block mb-8 mt-2">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-2xl text-[#00d4ff]" style={{ textShadow: '0 0 12px rgba(0, 212, 255, 0.6)' }}>
-              &#9889;
-            </span>
             <span className="font-orbitron font-bold text-base text-[#e0e0e0] tracking-[2px] uppercase">
               GYM BUDDY
             </span>
