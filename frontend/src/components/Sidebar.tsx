@@ -58,7 +58,7 @@ export default function Sidebar() {
       <nav className="flex flex-row md:flex-col gap-2 md:gap-4 w-full md:flex-1 justify-around md:justify-start">
         <button
           onClick={() => navigate('/dashboard')}
-          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
         >
           <span className="text-xl md:text-lg flex justify-center items-center">&#127968;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">HOME</span>
@@ -66,7 +66,7 @@ export default function Sidebar() {
 
         <button
           onClick={() => navigate('/workout')}
-          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/workout') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
         >
           <span className="text-xl md:text-lg flex justify-center items-center">&#127947;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">WORKOUT</span>
@@ -74,7 +74,7 @@ export default function Sidebar() {
 
         <button
           onClick={() => navigate('/history')}
-          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/history') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/history') ? 'active' : ''}`}
         >
           <span className="text-xl md:text-lg flex justify-center items-center">&#128202;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">HISTORY</span>
@@ -82,7 +82,7 @@ export default function Sidebar() {
 
         <button
           onClick={() => navigate('/diet-planner')}
-          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
         >
           <span className="text-xl md:text-lg flex justify-center items-center">&#127822;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">DIET</span>
@@ -91,7 +91,7 @@ export default function Sidebar() {
         {/* Mute Toggle (Icon only on mobile, full text on desktop) */}
         <button
           onClick={toggleMute}
-          className="sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3"
+          className="sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px]"
         >
           <span className="text-xl md:text-lg flex justify-center items-center relative">
             {isMuted ? '🔇' : '🔊'}
@@ -115,7 +115,7 @@ export default function Sidebar() {
         {/* Profile */}
         <button
           onClick={() => setIsProfileOpen(true)}
-          className={`sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 ${isProfileOpen ? 'active' : ''}`}
+          className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isProfileOpen ? 'active' : ''}`}
         >
           <span className="text-xl md:text-lg flex justify-center items-center text-[#c084fc]">&#128100;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">PROFILE</span>
@@ -124,7 +124,7 @@ export default function Sidebar() {
         {/* Logout */}
         <button
           onClick={logout}
-          className="sidebar-nav-item flex-col md:grid md:grid-cols-[32px_1fr] flex-1 md:flex-none h-full md:h-[50px] md:gap-3 text-[#ff4d6d] hover:text-[#ff2a55]"
+          className="sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] text-[#ff4d6d] hover:text-[#ff2a55]"
         >
           <span className="text-xl md:text-lg flex justify-center items-center">&#128682;</span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">LOGOUT</span>

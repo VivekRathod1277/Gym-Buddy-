@@ -217,8 +217,12 @@
   
   @media (min-width: 768px) {
     .sidebar-nav-item {
-      justify-content: flex-start;
-      padding: 0 16px;
+      display: grid !important;
+      grid-template-columns: 32px 1fr !important;
+      align-items: center !important;
+      gap: 12px !important;
+      padding: 0 16px !important;
+      text-align: left !important;
     }
   }
 
