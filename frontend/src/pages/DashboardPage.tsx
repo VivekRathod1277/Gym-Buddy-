@@ -19,8 +19,8 @@ export default function DashboardPage() {
     <div className="min-h-screen flex bg-[#242730]">
       <Sidebar />
 
-      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-screen">
-        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 flex flex-col min-h-screen">
+        <div className="flex-1 p-4 md:p-8 pt-16 md:pt-20 max-w-7xl mx-auto w-full">
           
           <div className="mb-8">
             <h1 className="font-orbitron text-3xl md:text-4xl text-white font-bold mb-2">
