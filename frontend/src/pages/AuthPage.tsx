@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { Zap } from 'lucide-react';
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -101,8 +102,8 @@ export default function AuthPage() {
 
         {/* Header */}
         <div className="auth-panel-header">
-          <div className="auth-panel-header-row">
-            <span className="auth-panel-icon">⚡</span>
+          <div className="auth-panel-header-row items-center gap-2">
+            <span className="auth-panel-icon flex items-center justify-center"><Zap className="w-6 h-6 text-[#00d4ff]" /></span>
             <span className="auth-panel-logo font-orbitron">GYM BUDDY</span>
           </div>
           <p className="auth-panel-welcome">

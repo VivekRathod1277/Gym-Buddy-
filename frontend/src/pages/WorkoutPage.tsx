@@ -9,6 +9,7 @@ import type { AnalysisStatus, InputMode, ExerciseType } from '@/types';
 import Sidebar from '@/components/Sidebar';
 import SessionSummaryModal from '@/components/SessionSummaryModal';
 import { WS_URL, API_BASE } from '@/lib/api';
+import { FlipHorizontal } from 'lucide-react';
 
 export default function WorkoutPage() {
   const [inputMode, setInputMode] = useState<InputMode>('upload');
@@ -507,10 +508,10 @@ export default function WorkoutPage() {
     <div className="min-h-[100dvh] flex" style={{ background: '#0a0a0f' }}>
       <Sidebar />
 
-      <main className="flex-1 md:ml-[260px] pb-[70px] md:pb-0 flex flex-col min-h-[100dvh]">
+      <main className="flex-1 flex flex-col min-h-[100dvh]">
         {/* Page Header */}
         <div
-          className="px-4 md:px-8 py-4 md:py-6"
+          className="px-4 md:px-8 pt-20 md:pt-24 pb-4 md:pb-6"
           style={{ borderBottom: '1px solid rgba(0, 212, 255, 0.15)' }}
         >
           <h1 className="font-orbitron font-bold text-lg md:text-[22px] tracking-[3px] uppercase text-[#e0e0e0]">
@@ -888,7 +889,7 @@ export default function WorkoutPage() {
             {inputMode === 'webcam' && (
               <div className="neo-card flex-1 p-4 md:p-5 flex flex-col justify-center items-center cursor-pointer hover:bg-white/5 transition-colors" onClick={toggleCamera}>
                 <div className="flex items-end gap-2">
-                  <span className="font-orbitron font-bold text-4xl text-[#e0e0e0]">🔄</span>
+                  <FlipHorizontal className="w-10 h-10 text-[#e0e0e0]" />
                 </div>
                 <span className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mt-2">
                   FLIP CAMERA

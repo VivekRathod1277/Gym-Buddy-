@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS, MUSCLE_GROUPS } from '@/types';
 import api from '@/lib/api';
+import { Bot, User, Target } from 'lucide-react';
 
 interface WorkoutSelectStepProps {
   onSelect: (exercise: string) => void;
@@ -154,7 +155,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
         {loading && (
           <div className="flex items-center gap-3 p-3">
             <div className="w-8 h-8 rounded-full bg-[rgba(0,212,255,0.15)] flex items-center justify-center">
-              <span className="text-sm">🤖</span>
+              <Bot className="w-5 h-5 text-[#00d4ff]" />
             </div>
             <div className="flex gap-1">
               <div className="w-2 h-2 rounded-full bg-[#00d4ff] animate-bounce" style={{ animationDelay: '0s' }} />
@@ -177,7 +178,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
                   : 'rgba(123, 47, 247, 0.15)',
               }}
             >
-              <span className="text-sm">{msg.role === 'ai' ? '🤖' : '🏃'}</span>
+              {msg.role === 'ai' ? <Bot className="w-5 h-5 text-[#00d4ff]" /> : <User className="w-5 h-5 text-[#7b2ff7]" />}
             </div>
             <div
               className={`px-4 py-2.5 rounded-xl max-w-[80%] font-inter text-sm`}
@@ -197,7 +198,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
         {negotiating && (
           <div className="flex items-center gap-3 p-3">
             <div className="w-8 h-8 rounded-full bg-[rgba(0,212,255,0.15)] flex items-center justify-center">
-              <span className="text-sm">🤖</span>
+              <Bot className="w-5 h-5 text-[#00d4ff]" />
             </div>
             <div className="flex gap-1">
               <div className="w-2 h-2 rounded-full bg-[#00d4ff] animate-bounce" />
@@ -303,7 +304,7 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
           opacity: !selectedExercise || loading ? 0.5 : 1 
         }}
       >
-        <span className="text-lg">🎯</span>
+        <Target className="w-6 h-6" />
         START {selectedExercise ? EXERCISE_DISPLAY_NAMES[selectedExercise]?.toUpperCase() : 'WORKOUT'}
       </button>
     </div>

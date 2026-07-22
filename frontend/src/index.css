@@ -197,11 +197,11 @@
   .sidebar-nav-item {
     width: 100%;
     height: 50px;
-    padding: 0 12px;
+    padding: 0 16px;
     border-radius: 12px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 32px 1fr;
     align-items: center;
-    justify-content: center;
     gap: 12px;
     font-family: 'Inter', sans-serif;
     font-size: 14px;
@@ -211,15 +211,8 @@
     cursor: pointer;
     transition: all 200ms ease;
     text-decoration: none;
-    /* Soft protruding state */
+    text-align: left;
     box-shadow: -3px -3px 6px var(--neo-shadow-light), 3px 3px 6px var(--neo-shadow-dark);
-  }
-  
-  @media (min-width: 768px) {
-    .sidebar-nav-item {
-      justify-content: flex-start;
-      padding: 0 16px;
-    }
   }
 
   .sidebar-nav-item:hover {

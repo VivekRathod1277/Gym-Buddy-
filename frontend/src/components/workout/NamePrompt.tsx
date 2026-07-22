@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { Hand } from 'lucide-react';
 
 interface NamePromptProps {
   onComplete: (name: string) => void;
@@ -36,8 +37,8 @@ export default function NamePrompt({ onComplete }: NamePromptProps) {
           animation: 'modalScaleIn 0.4s ease-out',
         }}
       >
-        <div className="text-center mb-6">
-          <span className="text-4xl block mb-3">👋</span>
+        <div className="text-center mb-6 flex flex-col items-center">
+          <Hand className="w-10 h-10 text-[#00d4ff] mb-3" />
           <h2 className="font-orbitron font-bold text-xl tracking-[2px] text-[#e0e0e0] uppercase">
             WHAT'S YOUR NAME?
           </h2>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS } from '@/types';
 import api from '@/lib/api';
+import { Dumbbell } from 'lucide-react';
 
 interface SetSummaryStepProps {
   exercise: string;
@@ -147,7 +148,7 @@ export default function SetSummaryStep({
             background: `linear-gradient(135deg, ${exerciseColor}, #7b2ff7)`,
           }}
         >
-          <span className="text-lg">💪</span>
+          <Dumbbell className="w-5 h-5" />
           NEXT SET
         </button>
 

@@ -3,6 +3,7 @@ import { useVoice } from '@/hooks/useVoice';
 import { useToast } from '@/hooks/useToast';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS } from '@/types';
 import { WS_URL } from '@/lib/api';
+import { FlipHorizontal } from 'lucide-react';
 
 interface ExercisingStepProps {
   exercise: string;
@@ -391,7 +392,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           className="flex-1 p-2 md:p-3 rounded-xl flex flex-col items-center justify-center transition-all hover:bg-white/10"
           style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
         >
-          <span className="text-lg md:text-xl mb-0.5">🔄</span>
+          <FlipHorizontal className="w-5 h-5 mb-0.5" />
           <span className="font-inter text-[9px] md:text-[10px] font-semibold text-[#8888aa] tracking-wider uppercase">FLIP</span>
         </button>
 

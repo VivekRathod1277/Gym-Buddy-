@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useVoice } from '@/hooks/useVoice';
 import { useSessions } from '@/hooks/useSessions';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS } from '@/types';
+import { Trophy, RotateCw } from 'lucide-react';
 
 interface SetData {
   reps: number;
@@ -64,7 +65,7 @@ export default function SessionEndStep({ exercise, sets, totalDuration, onNewWor
           animation: 'trophyGlow 2s ease-in-out infinite',
         }}
       >
-        <span className="text-5xl">🏆</span>
+        <Trophy className="w-10 h-10 text-[#ffcc00] drop-shadow-[0_0_15px_rgba(255,204,0,0.6)]" />
       </div>
 
       <h2 className="font-orbitron font-black text-2xl tracking-[3px] uppercase text-[#00d4ff] mb-2">
@@ -152,7 +153,7 @@ export default function SessionEndStep({ exercise, sets, totalDuration, onNewWor
           onClick={onNewWorkout}
           className="w-full py-4 rounded-xl font-orbitron font-bold text-lg tracking-widest text-black transition-all bg-[#00d4ff] hover:bg-[#00e5ff] shadow-[0_0_15px_rgba(0,212,255,0.4)] hover:shadow-[0_0_25px_rgba(0,212,255,0.6)] flex items-center justify-center gap-2"
         >
-          <span className="text-lg">🔄</span>
+          <RotateCw className="w-5 h-5" />
           NEW WORKOUT
         </button>
 
