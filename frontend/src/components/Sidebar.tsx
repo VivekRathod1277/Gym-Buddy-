@@ -31,7 +31,7 @@ export default function Sidebar() {
           </span>
         </div>
         <p className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase">
-          BIOMECHANICAL ANALYSIS
+          AI-POWERED FORM CORRECTION
         </p>
       </div>
 
