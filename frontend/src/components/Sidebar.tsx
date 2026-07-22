@@ -60,32 +60,32 @@ export default function Sidebar() {
           onClick={() => navigate('/dashboard')}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg">&#127968;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HOME</span>
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#127968;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">HOME</span>
         </button>
 
         <button
           onClick={() => navigate('/workout')}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg">&#127947;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">WORKOUT</span>
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#127947;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">WORKOUT</span>
         </button>
 
         <button
           onClick={() => navigate('/history')}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/history') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg">&#128202;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">HISTORY</span>
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#128202;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">HISTORY</span>
         </button>
 
         <button
           onClick={() => navigate('/diet-planner')}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg">&#127822;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">DIET</span>
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#127822;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">DIET</span>
         </button>
 
         {/* Mute Toggle (Icon only on mobile, full text on desktop) */}
@@ -93,13 +93,13 @@ export default function Sidebar() {
           onClick={toggleMute}
           className="sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px]"
         >
-          <span className="text-xl md:text-lg relative">
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block relative">
             {isMuted ? '🔇' : '🔊'}
             {isMuted && (
               <span className="md:hidden absolute top-0 right-0 w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
             )}
           </span>
-          <span className="hidden md:inline font-bold tracking-wider text-[10px] md:text-sm">
+          <span className="hidden md:inline font-bold tracking-wider text-[10px] md:text-sm text-left md:flex-1">
             {isMuted ? 'UNMUTE' : 'MUTE'}
           </span>
           {isMuted && (
@@ -115,8 +115,8 @@ export default function Sidebar() {
           onClick={() => setIsProfileOpen(true)}
           className={`sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] ${isProfileOpen ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg text-[#c084fc]">&#128100;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">PROFILE</span>
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block text-[#c084fc]">&#128100;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">PROFILE</span>
         </button>
 
         {/* Logout */}
@@ -124,8 +124,8 @@ export default function Sidebar() {
           onClick={logout}
           className="sidebar-nav-item flex-col md:flex-row flex-1 md:flex-none h-full md:h-[50px] text-[#ff4d6d] hover:text-[#ff2a55]"
         >
-          <span className="text-xl md:text-lg">&#128682;</span>
-          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider">LOGOUT</span>
+          <span className="w-6 md:w-8 text-center text-xl md:text-lg inline-block">&#128682;</span>
+          <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-left md:flex-1">LOGOUT</span>
         </button>
       </nav>
 
