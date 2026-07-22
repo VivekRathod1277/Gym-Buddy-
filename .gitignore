@@ -17,7 +17,7 @@ __pycache__/
 venv/
 ENV/
 env/
-
+backend-server/env/
 # Logs, Diagnostics & Temp files
 *.log
 *traceback.txt
