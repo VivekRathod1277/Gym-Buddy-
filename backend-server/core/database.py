@@ -282,4 +282,63 @@ def save_workout_exercise(workout_routine_id: int, name: str, sets: int, reps: s
     except Exception as e:
         print(f"Error saving workout exercise: {e}")
 
+def update_latest_fitness_plan(user_id: int, plan_json: str) -> bool:
+    if not supabase: return False
+    try:
+        res = supabase.table("fitness_records").select("id").eq("user_id", user_id).order("date", desc=True).limit(1).execute()
+        if res.data:
+            rec_id = res.data[0]['id']
+            supabase.table("fitness_records").update({"plan_json": plan_json}).eq("id", rec_id).execute()
+            return True
+        return False
+    except Exception as e:
+        print(f"Error updating latest fitness plan: {e}")
+        return False
+
+def update_db_workout_exercises(user_id: int, day_name: str, exercises: list) -> bool:
+    if not supabase: return False
+    try:
+        res = supabase.table("workout_routines").select("id").eq("user_id", user_id).eq("day_name", day_name).execute()
+        if res.data:
+            routine_id = res.data[0]['id']
+        else:
+            routine_id = save_workout_routine(
+                user_id=user_id,
+                day_name=day_name,
+                workout_type="Custom Workout",
+                focus="Custom Focus",
+                duration="30 min",
+                color="#6366f1"
+            )
+        
+        if routine_id:
+            supabase.table("workout_exercises").delete().eq("workout_routine_id", routine_id).execute()
+            
+            def _safe_int(val, default=3):
+                if val is None:
+                    return default
+                if isinstance(val, (int, float)):
+                    return int(val)
+                if isinstance(val, str):
+                    digits = "".join([c for c in val if c.isdigit()])
+                    if digits:
+                        return int(digits)
+                return default
+
+            for ex in exercises:
+                save_workout_exercise(
+                    workout_routine_id=routine_id,
+                    name=ex.get('name', ''),
+                    sets=_safe_int(ex.get('sets', 3)),
+                    reps=str(ex.get('reps', '12 reps')),
+                    rest=str(ex.get('rest', '45s')),
+                    notes=str(ex.get('notes', ''))
+                )
+            return True
+        return False
+    except Exception as e:
+        print(f"Error updating db workout exercises: {e}")
+        return False
+
 init_db()
+

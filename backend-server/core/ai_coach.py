@@ -165,31 +165,93 @@ class AICoach:
             "reasoning": f"You haven't trained {min_group} much this week. Let's hit it today!",
         }
 
+    def suggest_workout_from_routine(self, day_num: int, workout_type: str, focus: str, exercises: list, trackable_exercises: list, suggested_exercise: str) -> dict:
+        """
+        Generate a personalized workout suggestion based on the user's generated weekly routine.
+        """
+        system = (
+            "You are a personal trainer planning today's workout based on the user's AI-generated 7-day routine. "
+            "Explain what day of the routine it is, the workout type, focus, and what exercises are scheduled. "
+            "If there are trackable exercises (like pushups, squats, bicep curls, pullups, chest press), suggest starting with one of them. "
+            "If it's a rest/recovery/cardio day with no trackable exercises, mention that but encourage them to do a trackable exercise anyway to keep their momentum. "
+            "Respond in EXACTLY this JSON format, nothing else:\n"
+            '{"suggested_exercise": "exercise_name", "muscle_group": "group", "reasoning": "1-2 sentence spoken explanation"}\n'
+            "Valid exercises: pushup, pullup, squat, bicep_curl, chest_press. "
+            "Valid muscle groups: chest, back, legs, arms. "
+            "The reasoning should sound like a trainer speaking naturally. No emojis or markdown."
+        )
+
+        user_msg = (
+            f"Routine Day: Day {day_num}. "
+            f"Workout Type: {workout_type}. "
+            f"Focus: {focus}. "
+            f"Scheduled Exercises: {', '.join([ex.get('name', '') for ex in exercises])}. "
+            f"AI-Trackable Exercises on Schedule: {', '.join(trackable_exercises) if trackable_exercises else 'None'}. "
+            f"Suggested Exercise to Track: {suggested_exercise}."
+        )
+
+        result = self._chat(system, user_msg, max_tokens=180, temperature=0.5)
+
+        try:
+            if result:
+                cleaned = result.strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
+                    cleaned = cleaned.rsplit("```", 1)[0]
+                data = json.loads(cleaned.strip())
+                return {
+                    "suggested_exercise": data.get("suggested_exercise", suggested_exercise),
+                    "muscle_group": data.get("muscle_group", "chest"),
+                    "reasoning": data.get("reasoning", f"Today is Day {day_num}, a {workout_type} day. Let's do some {suggested_exercise}!"),
+                }
+        except Exception:
+            pass
+
+        # Fallback reasoning
+        muscle_group = "chest"
+        if suggested_exercise == "pullup":
+            muscle_group = "back"
+        elif suggested_exercise == "squat":
+            muscle_group = "legs"
+        elif suggested_exercise == "bicep_curl":
+            muscle_group = "arms"
+        elif suggested_exercise == "chest_press":
+            muscle_group = "chest"
+
+        if trackable_exercises:
+            reasoning = f"Today is Day {day_num} of your routine, focusing on {focus}. The schedule recommends {', '.join(trackable_exercises)}. Let's start with {suggested_exercise}!"
+        else:
+            reasoning = f"Today is Day {day_num} of your routine: {workout_type}. It is a recovery day with no trackable exercises, but let's do some {suggested_exercise} to stay active!"
+
+        return {
+            "suggested_exercise": suggested_exercise,
+            "muscle_group": muscle_group,
+            "reasoning": reasoning
+        }
+
     # ─────────────────────────────────────────────────────────────────────
     #  3. Workout Negotiation
     # ─────────────────────────────────────────────────────────────────────
 
     def negotiate_workout(self, user_preference: str, weekly_history: dict, ai_suggestion: str) -> dict:
         """
-        Respond to user overriding the AI's workout suggestion.
+        Respond to user overriding the AI's workout suggestion by confirming their choice immediately.
         Returns: {"response": str, "final_exercise": str}
         """
         system = (
-            "You are a personal trainer. The user wants to train a different muscle group "
-            "than what you suggested. Respond like a real trainer would — if their choice "
-            "is unbalanced (e.g., they've already trained that group 2+ times this week), "
-            "push back firmly but respectfully. If their choice makes sense, agree. "
-            "Keep it to 2-3 sentences. Sound natural, spoken aloud. No emojis or markdown. "
-            "End by confirming what exercise you'll do. "
+            "You are a personal trainer. The user wants to change today's exercise. "
+            "You must agree immediately without any pushback. "
+            "Confirm the choice, mention that you've updated their weekly routine page to match, "
+            "and encourage them to get started. "
+            "Keep it to 2 sentences. Speak naturally. No emojis or markdown. "
             "Respond in EXACTLY this JSON format:\n"
             '{"response": "your spoken response", "final_exercise": "exercise_name"}\n'
             "Valid exercises: pushup, pullup, squat, bicep_curl, chest_press."
         )
 
         user_msg = (
-            f"AI suggested: {ai_suggestion}. "
-            f"User wants: {user_preference}. "
-            f"Weekly history: {json.dumps(weekly_history)}."
+            f"User wants to train: {user_preference}. "
+            f"Original suggest: {ai_suggestion}."
         )
 
         result = self._chat(system, user_msg, max_tokens=200, temperature=0.7)
@@ -202,14 +264,13 @@ class AICoach:
                     cleaned = cleaned.rsplit("```", 1)[0]
                 data = json.loads(cleaned.strip())
                 return {
-                    "response": data.get("response", "Alright, let's do it your way!"),
+                    "response": data.get("response", f"Sure, let's switch today's workout to {user_preference}. I've updated your routine page!"),
                     "final_exercise": data.get("final_exercise", "pushup"),
                 }
         except (json.JSONDecodeError, KeyError):
             pass
 
-        # Fallback: agree with the user
-        # Try to map user preference to a valid exercise
+        # Fallback mapping
         preference_lower = user_preference.lower()
         exercise_map = {
             "chest": "pushup", "push": "pushup", "pushup": "pushup",
@@ -218,16 +279,26 @@ class AICoach:
             "arms": "bicep_curl", "arm": "bicep_curl", "bicep": "bicep_curl", "curl": "bicep_curl",
             "bench": "chest_press", "press": "chest_press", "chest_press": "chest_press",
         }
-        final = "pushup"
-        for key, val in exercise_map.items():
-            if key in preference_lower:
-                final = val
+        
+        final_ex = "pushup"
+        for k, v in exercise_map.items():
+            if k in preference_lower:
+                final_ex = v
                 break
+        
+        display_name = {
+            "pushup": "push-ups",
+            "pullup": "pull-ups",
+            "squat": "squats",
+            "bicep_curl": "bicep curls",
+            "chest_press": "chest press"
+        }.get(final_ex, final_ex)
 
         return {
-            "response": f"Alright, we'll go with {final.replace('_', ' ')} today. Let's make it count!",
-            "final_exercise": final,
+            "response": f"Sure, let's do {display_name} instead! I have updated today's workout in your weekly routine.",
+            "final_exercise": final_ex,
         }
+
 
     # ─────────────────────────────────────────────────────────────────────
     #  4. Positioning Tips

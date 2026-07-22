@@ -56,16 +56,14 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, negotiating]);
 
-  const handleNegotiate = async () => {
-    if (!userInput.trim() || negotiating) return;
-    const userMsg = userInput.trim();
-    setUserInput('');
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+  const runNegotiation = async (text: string) => {
+    if (!text.trim() || negotiating) return;
+    setMessages(prev => [...prev, { role: 'user', text }]);
     setNegotiating(true);
 
     try {
       const res = await api.post('/coach/negotiate', {
-        user_preference: userMsg,
+        user_preference: text,
         ai_suggestion: suggestion?.suggested_exercise || 'pushup',
       });
       const aiReply = res.data.response;
@@ -79,6 +77,25 @@ export default function WorkoutSelectStep({ onSelect }: WorkoutSelectStepProps) 
     }
     setNegotiating(false);
   };
+
+  const handleNegotiate = () => {
+    if (!userInput.trim() || negotiating) return;
+    runNegotiation(userInput.trim());
+    setUserInput('');
+  };
+
+  useEffect(() => {
+    const handleVoiceNegotiate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        runNegotiation(customEvent.detail);
+      }
+    };
+    window.addEventListener('voice-negotiate', handleVoiceNegotiate);
+    return () => {
+      window.removeEventListener('voice-negotiate', handleVoiceNegotiate);
+    };
+  }, [suggestion, negotiating]);
 
   const handleConfirm = () => {
     if (selectedExercise) {
