@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import api from '@/lib/api';
+import BiomechanicalLoader from '@/components/BiomechanicalLoader';
 
 interface GreetingStepProps {
   onNext: () => void;
@@ -56,27 +57,25 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6 text-center" style={{ minHeight: '60vh' }}>
-      {/* Pulsing trainer icon */}
-      <div
-        className="w-24 h-24 rounded-full flex items-center justify-center mb-8"
-        style={{
-          background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(123, 47, 247, 0.15))',
-          border: '2px solid rgba(0, 212, 255, 0.3)',
-          boxShadow: '0 0 40px rgba(0, 212, 255, 0.15)',
-          animation: loading ? 'pulse-glow 2s infinite' : 'none',
-        }}
-      >
-        <span className="text-5xl">{loading ? '🤖' : '🏋️'}</span>
-      </div>
+      {loading ? (
+        <BiomechanicalLoader />
+      ) : (
+        <>
+          {/* Pulsing trainer icon */}
+          <div
+            className="w-24 h-24 rounded-full flex items-center justify-center mb-8 mx-auto"
+            style={{
+              background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(123, 47, 247, 0.15))',
+              border: '2px solid rgba(0, 212, 255, 0.3)',
+              boxShadow: '0 0 40px rgba(0, 212, 255, 0.15)',
+            }}
+          >
+            <span className="text-5xl">🏋️</span>
+          </div>
 
-      {/* Greeting text */}
-      <div className="max-w-[500px] mb-10" style={{ minHeight: '80px' }}>
-        {loading ? (
-          <p className="font-inter text-[#8888aa] text-lg animate-pulse">
-            Preparing your session...
-          </p>
-        ) : (
-          <p
+          {/* Greeting text */}
+          <div className="max-w-[500px] mb-10 mx-auto" style={{ minHeight: '80px' }}>
+            <p
             className="font-inter text-lg text-[#e0e0e0] leading-relaxed"
             style={{ textShadow: '0 0 20px rgba(0, 212, 255, 0.2)' }}
           >
@@ -89,9 +88,10 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
                 opacity: displayedText.length < greeting.length ? 1 : 0,
               }}
             />
-          </p>
-        )}
-      </div>
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Continue button */}
       <button
