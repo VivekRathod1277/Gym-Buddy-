@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoice } from '@/hooks/useVoice';
 import { useState } from 'react';
-import { VolumeX, Volume2 } from 'lucide-react';
+import { VolumeX, Volume2, Home, Dumbbell, BarChart2, Apple, User, LogOut } from 'lucide-react';
 import ProfileModal from '@/components/ProfileModal';
 
 export default function Sidebar() {
@@ -61,7 +61,9 @@ export default function Sidebar() {
           onClick={() => navigate('/dashboard')}
           className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/dashboard') || isActive('/') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg flex justify-center items-center">&#127968;</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">
+            <Home className="w-5 h-5 md:w-5 md:h-5" />
+          </span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">HOME</span>
         </button>
 
@@ -69,7 +71,9 @@ export default function Sidebar() {
           onClick={() => navigate('/workout')}
           className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/workout') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg flex justify-center items-center">&#127947;</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">
+            <Dumbbell className="w-5 h-5 md:w-5 md:h-5" />
+          </span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">WORKOUT</span>
         </button>
 
@@ -77,7 +81,9 @@ export default function Sidebar() {
           onClick={() => navigate('/history')}
           className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/history') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg flex justify-center items-center">&#128202;</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">
+            <BarChart2 className="w-5 h-5 md:w-5 md:h-5" />
+          </span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">HISTORY</span>
         </button>
 
@@ -85,7 +91,9 @@ export default function Sidebar() {
           onClick={() => navigate('/diet-planner')}
           className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isActive('/diet-planner') || isActive('/diet-dashboard') ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg flex justify-center items-center">&#127822;</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">
+            <Apple className="w-5 h-5 md:w-5 md:h-5" />
+          </span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">DIET</span>
         </button>
 
@@ -118,7 +126,9 @@ export default function Sidebar() {
           onClick={() => setIsProfileOpen(true)}
           className={`sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] ${isProfileOpen ? 'active' : ''}`}
         >
-          <span className="text-xl md:text-lg flex justify-center items-center text-[#c084fc]">&#128100;</span>
+          <span className="text-xl md:text-lg flex justify-center items-center text-[#c084fc]">
+            <User className="w-5 h-5 md:w-5 md:h-5" />
+          </span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">PROFILE</span>
         </button>
 
@@ -127,7 +137,9 @@ export default function Sidebar() {
           onClick={logout}
           className="sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px] text-[#ff4d6d] hover:text-[#ff2a55]"
         >
-          <span className="text-xl md:text-lg flex justify-center items-center">&#128682;</span>
+          <span className="text-xl md:text-lg flex justify-center items-center">
+            <LogOut className="w-5 h-5 md:w-5 md:h-5" />
+          </span>
           <span className="text-[10px] md:text-sm mt-1 md:mt-0 font-bold tracking-wider text-center md:text-left">LOGOUT</span>
         </button>
       </nav>
