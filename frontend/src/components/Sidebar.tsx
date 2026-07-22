@@ -22,13 +22,26 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Floating Hamburger Menu */}
-      <button 
-        onClick={() => setIsOpen(true)}
-        className="fixed top-4 left-4 z-40 p-2 rounded-lg bg-[#242730]/80 text-[#00d4ff] hover:bg-white/5 border border-[#00d4ff]/20 backdrop-blur-md transition-all shadow-[0_0_15px_rgba(0,212,255,0.15)]"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* Top App Bar (Visible on all screens when drawer is closed) */}
+      <div className="fixed top-0 left-0 w-full h-16 z-30 flex items-center px-4 bg-[#0a0a0f]/80 backdrop-blur-md border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsOpen(true)}
+            className="p-2 rounded-lg text-[#00d4ff] hover:bg-white/5 transition-all"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-xl text-[#00d4ff]" style={{ textShadow: '0 0 12px rgba(0, 212, 255, 0.6)' }}>
+              &#9889;
+            </span>
+            <span className="font-orbitron font-bold text-sm md:text-base text-[#e0e0e0] tracking-[2px] uppercase">
+              GYM BUDDY
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Backdrop */}
       {isOpen && (
