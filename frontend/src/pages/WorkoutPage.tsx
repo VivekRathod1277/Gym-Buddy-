@@ -9,6 +9,7 @@ import type { AnalysisStatus, InputMode, ExerciseType } from '@/types';
 import Sidebar from '@/components/Sidebar';
 import SessionSummaryModal from '@/components/SessionSummaryModal';
 import { WS_URL, API_BASE } from '@/lib/api';
+import { FlipHorizontal } from 'lucide-react';
 
 export default function WorkoutPage() {
   const [inputMode, setInputMode] = useState<InputMode>('upload');
@@ -888,7 +889,7 @@ export default function WorkoutPage() {
             {inputMode === 'webcam' && (
               <div className="neo-card flex-1 p-4 md:p-5 flex flex-col justify-center items-center cursor-pointer hover:bg-white/5 transition-colors" onClick={toggleCamera}>
                 <div className="flex items-end gap-2">
-                  <span className="font-orbitron font-bold text-4xl text-[#e0e0e0]">🔄</span>
+                  <FlipHorizontal className="w-10 h-10 text-[#e0e0e0]" />
                 </div>
                 <span className="font-inter text-[11px] font-semibold text-[#8888aa] tracking-[1.5px] uppercase mt-2">
                   FLIP CAMERA

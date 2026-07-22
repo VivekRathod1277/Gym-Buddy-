@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import api from '@/lib/api';
 import BiomechanicalLoader from '@/components/BiomechanicalLoader';
+import { Dumbbell, Activity } from 'lucide-react';
 
 interface GreetingStepProps {
   onNext: () => void;
@@ -76,7 +77,7 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
             }}
           >
             <div className="absolute inset-0 rounded-full border-[1px] border-[#7b2ff7] opacity-40 blur-[2px] scale-[1.15]"></div>
-            <span className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10 relative animate-[bounce_3s_infinite]">🏋️</span>
+            <Dumbbell className="w-12 h-12 text-[#00d4ff] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10 relative animate-[bounce_3s_infinite]" />
           </div>
 
           {/* Greeting text card */}
@@ -131,7 +132,7 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
         <div className="absolute inset-0 bg-gradient-to-r from-[#00d4ff] to-[#7b2ff7] opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
         <div className="absolute -inset-[100%] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.1)] to-transparent -skew-x-[45deg] group-hover:animate-shine"></div>
         
-        <span className="text-2xl relative z-10 group-hover:scale-110 transition-transform duration-300">💪</span>
+        <Activity className="w-6 h-6 text-[#00d4ff] relative z-10 group-hover:scale-110 group-hover:text-white transition-all duration-300" />
         <span className="font-inter font-bold text-[#00d4ff] tracking-[3px] text-sm md:text-base relative z-10 drop-shadow-[0_0_8px_rgba(0,212,255,0.5)] group-hover:text-white transition-colors duration-300">
           LET'S TRAIN
         </span>

@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useVoice } from '@/hooks/useVoice';
 import { useState } from 'react';
+import { VolumeX, Volume2 } from 'lucide-react';
 import ProfileModal from '@/components/ProfileModal';
 
 export default function Sidebar() {
@@ -94,7 +95,7 @@ export default function Sidebar() {
           className="sidebar-nav-item flex-col flex-1 md:flex-none h-full md:h-[50px]"
         >
           <span className="text-xl md:text-lg flex justify-center items-center relative">
-            {isMuted ? '🔇' : '🔊'}
+            {isMuted ? <VolumeX className="w-5 h-5 text-[#ff4d6d]" /> : <Volume2 className="w-5 h-5 text-[#00d4ff]" />}
             {isMuted && (
               <span className="md:hidden absolute top-0 right-0 w-2 h-2 rounded-full bg-[#ff4d6d] shadow-[0_0_8px_rgba(255,77,109,0.8)]" />
             )}

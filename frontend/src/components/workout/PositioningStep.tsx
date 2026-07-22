@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import { EXERCISE_DISPLAY_NAMES, EXERCISE_COLORS } from '@/types';
 import api from '@/lib/api';
+import { Ruler, FlipHorizontal, Rocket } from 'lucide-react';
 
 interface PositioningStepProps {
   exercise: string;
@@ -217,7 +218,7 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
               border: `1px solid ${exerciseColor}40`,
             }}
           >
-            📐 POSITIONING
+            <Ruler className="w-4 h-4" /> POSITIONING
           </div>
 
           {/* Flip Camera Button */}
@@ -230,7 +231,7 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
               border: '1px solid rgba(255, 255, 255, 0.2)',
             }}
           >
-            <span>🔄</span> FLIP
+            <FlipHorizontal className="w-4 h-4" /> FLIP
           </button>
         </div>
 
@@ -298,7 +299,7 @@ export default function PositioningStep({ exercise, onReady }: PositioningStepPr
             : undefined,
         }}
       >
-        <span className="text-lg">🚀</span>
+        <Rocket className="w-5 h-5" />
         {readyCountdown !== null ? 'STARTING...' : "I'M READY — START COUNTING"}
       </button>
 
