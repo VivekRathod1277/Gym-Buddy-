@@ -98,6 +98,17 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
     onSetComplete(reps, collectedFaultsRef.current, lastAiTipRef.current || aiTip);
   }, [reps, aiTip, setNumber, speak, onSetComplete]);
 
+  // Listen for voice command to stop set
+  useEffect(() => {
+    const handleVoiceStop = () => {
+      handleStopSet();
+    };
+    window.addEventListener('voice-complete-set', handleVoiceStop);
+    return () => {
+      window.removeEventListener('voice-complete-set', handleVoiceStop);
+    };
+  }, [handleStopSet]);
+
   // Start webcam + WebSocket
   useEffect(() => {
     let cancelled = false;
