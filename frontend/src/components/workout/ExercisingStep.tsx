@@ -275,7 +275,6 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
   return (
     <div className="flex-1 flex flex-col gap-3 p-3 md:p-6">
       {/* Hidden elements for capture */}
-      <video ref={videoRef} className="hidden" playsInline muted />
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Top bar: set info + timer */}
@@ -309,26 +308,36 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
         className="relative flex-1 rounded-xl overflow-hidden"
         style={{ background: '#000', border: `1px solid ${exerciseColor}20`, minHeight: '250px' }}
       >
+        <video 
+          ref={videoRef} 
+          playsInline 
+          muted 
+          className="absolute inset-0 w-full h-full object-contain"
+          style={{ zIndex: 1 }}
+        />
+
         {/* Live processed frame */}
-        {liveFrame ? (
+        {liveFrame && (
           <img
             src={liveFrame}
             alt="Live Analysis"
             className="absolute inset-0 w-full h-full object-contain"
             style={{ zIndex: 5 }}
           />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
+        )}
+        
+        {!liveFrame && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50" style={{ zIndex: 3 }}>
+            <div className="text-center p-4 rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
               <div
-                className="w-12 h-12 rounded-full border-3 mx-auto mb-3"
+                className="w-12 h-12 rounded-full border-[3px] mx-auto mb-3"
                 style={{
                   borderColor: 'rgba(0, 212, 255, 0.2)',
                   borderTopColor: '#00d4ff',
                   animation: 'spin-loader 1s linear infinite',
                 }}
               />
-              <p className="text-[#8888aa] text-sm">Connecting to analysis engine...</p>
+              <p className="text-white text-sm font-semibold tracking-wider font-inter drop-shadow-md">Connecting to analysis engine...</p>
             </div>
           </div>
         )}
