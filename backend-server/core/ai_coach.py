@@ -30,7 +30,7 @@ class AICoach:
             base_url="https://integrate.api.nvidia.com/v1",
             api_key=api_key,
         )
-        self.model = "deepseek-ai/deepseek-v4-pro"
+        self.model = "meta/llama-3.1-8b-instruct"
 
     # ─────────────────────────────────────────────────────────────────────
     #  Internal helper
