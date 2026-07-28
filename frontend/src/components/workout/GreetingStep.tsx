@@ -84,9 +84,10 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
 
           {/* Greeting text card */}
           <div 
-            className="w-full max-w-[650px] mb-12 p-8 md:p-10 rounded-2xl relative overflow-hidden transition-all duration-700" 
+            className="w-full max-w-[650px] mb-12 p-8 md:p-10 rounded-2xl relative overflow-hidden transition-all duration-700 flex flex-col" 
             style={{ 
               minHeight: '140px',
+              maxHeight: '45vh',
               background: 'rgba(30, 33, 42, 0.6)',
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -100,20 +101,23 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
             {/* Bottom decorative gradient line */}
             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#7b2ff7] to-transparent opacity-30"></div>
             
-            <p
-              className="font-inter text-xl md:text-2xl text-[#f0f0f0] leading-[1.6] font-light tracking-wide"
-              style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)' }}
-            >
-              {displayedText}
-              <span
-                className="inline-block w-[3px] h-[1.1em] ml-[6px] align-text-bottom rounded-sm"
-                style={{
-                  background: 'linear-gradient(to bottom, #00d4ff, #7b2ff7)',
-                  animation: displayedText.length < greeting.length ? 'blink 0.6s infinite' : 'pulse-opacity 2s infinite',
-                  boxShadow: '0 0 12px rgba(0, 212, 255, 0.6)'
-                }}
-              />
-            </p>
+            <div className="flex-1 overflow-y-auto scrollbar-custom pr-2 -mr-2">
+              <p
+                className="font-inter text-xl md:text-2xl text-[#f0f0f0] leading-[1.6] font-light tracking-wide"
+                style={{ textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)' }}
+              >
+                {displayedText}
+                <span
+                  className="inline-block w-[3px] h-[1.1em] ml-[6px] align-text-bottom rounded-sm"
+                  style={{
+                    background: 'linear-gradient(to bottom, #00d4ff, #7b2ff7)',
+                    animation: displayedText.length < greeting.length ? 'blink 0.6s infinite' : 'pulse-opacity 2s infinite',
+                    boxShadow: '0 0 12px rgba(0, 212, 255, 0.6)'
+                  }}
+                />
+              </p>
+              <div ref={bottomRef} className="h-4 w-full shrink-0" />
+            </div>
           </div>
         </div>
       )}
@@ -164,7 +168,6 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
           100% { transform: translateX(200%) skewX(-45deg); }
         }
       `}</style>
-      <div ref={bottomRef} className="h-10 w-full shrink-0" />
     </div>
   );
 }
