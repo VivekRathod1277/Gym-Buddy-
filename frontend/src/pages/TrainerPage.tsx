@@ -37,6 +37,7 @@ export default function TrainerPage() {
   const [voiceControlEnabled, setVoiceControlEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isVoicePanelOpen, setIsVoicePanelOpen] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   const stepRef = useRef(step);
@@ -297,94 +298,119 @@ export default function TrainerPage() {
       </div>
 
       {/* Floating Voice Command HUD */}
-      <div 
-        className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl flex flex-col gap-3 transition-all duration-300 shadow-[0_0_25px_rgba(0,212,255,0.15)] md:w-80 w-[calc(100%-3rem)]"
-        style={{
-          background: 'rgba(10, 10, 20, 0.85)',
-          border: '1px solid rgba(0, 212, 255, 0.25)',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <div className="flex items-center justify-between border-b border-white/10 pb-2">
-          <div className="flex items-center gap-2">
-            <span className={`w-3 h-3 rounded-full ${isListening ? 'bg-[#00ff88] animate-ping' : 'bg-gray-500'}`} />
-            <span className="font-orbitron text-xs font-bold tracking-[1.5px] text-[#e0e0e0]">
-              BUDDY VOICE CONTROL
-            </span>
-          </div>
-          <button
-            onClick={() => setVoiceControlEnabled(!voiceControlEnabled)}
-            className="text-[10px] font-orbitron font-semibold tracking-wider px-2.5 py-1 rounded-lg transition-all"
-            style={{
-              background: voiceControlEnabled ? 'rgba(255, 77, 109, 0.15)' : 'rgba(0, 212, 255, 0.15)',
-              color: voiceControlEnabled ? '#ff4d6d' : '#00d4ff',
-              border: `1px solid ${voiceControlEnabled ? 'rgba(255, 77, 109, 0.3)' : 'rgba(0, 212, 255, 0.3)'}`,
-            }}
-          >
-            {voiceControlEnabled ? 'MUTE MIC' : 'ACTIVATE'}
-          </button>
-        </div>
+      {!isVoicePanelOpen && (
+        <button
+          onClick={() => setIsVoicePanelOpen(true)}
+          className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_20px_rgba(0,212,255,0.3)] hover:scale-110 ${
+            voiceControlEnabled && isListening ? 'bg-[rgba(0,212,255,0.15)] shadow-[0_0_30px_rgba(0,212,255,0.4)]' : 'bg-[rgba(10,10,20,0.85)]'
+          }`}
+          style={{
+            border: '1px solid rgba(0, 212, 255, 0.25)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <span className={`text-2xl ${voiceControlEnabled && isListening ? 'text-[#00d4ff] animate-pulse' : 'text-gray-500'}`}>🎤</span>
+        </button>
+      )}
 
-        {voiceControlEnabled ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div 
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  isListening ? 'bg-[#00d4ff]/20 border border-[#00d4ff] shadow-[0_0_15px_rgba(0,212,255,0.4)]' : 'bg-white/5 border border-white/10'
-                }`}
+      {isVoicePanelOpen && (
+        <div 
+          className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl flex flex-col gap-3 transition-all duration-300 shadow-[0_0_25px_rgba(0,212,255,0.15)] md:w-80 w-[calc(100%-3rem)]"
+          style={{
+            background: 'rgba(10, 10, 20, 0.85)',
+            border: '1px solid rgba(0, 212, 255, 0.25)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="flex items-center gap-2">
+              <span className={`w-3 h-3 rounded-full ${isListening ? 'bg-[#00ff88] animate-ping' : 'bg-gray-500'}`} />
+              <span className="font-orbitron text-xs font-bold tracking-[1.5px] text-[#e0e0e0]">
+                BUDDY VOICE CONTROL
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setVoiceControlEnabled(!voiceControlEnabled)}
+                className="text-[10px] font-orbitron font-semibold tracking-wider px-2.5 py-1 rounded-lg transition-all"
+                style={{
+                  background: voiceControlEnabled ? 'rgba(255, 77, 109, 0.15)' : 'rgba(0, 212, 255, 0.15)',
+                  color: voiceControlEnabled ? '#ff4d6d' : '#00d4ff',
+                  border: `1px solid ${voiceControlEnabled ? 'rgba(255, 77, 109, 0.3)' : 'rgba(0, 212, 255, 0.3)'}`,
+                }}
               >
-                <span className={`text-lg ${isListening ? 'animate-pulse text-[#00d4ff]' : 'text-gray-500'}`}>🎤</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-inter font-bold text-gray-500 tracking-wider">LAST HEARD:</div>
-                <div className="text-xs font-inter text-gray-200 italic truncate">
-                  {voiceTranscript ? `"${voiceTranscript}"` : 'Listening for your command...'}
+                {voiceControlEnabled ? 'MUTE MIC' : 'ACTIVATE'}
+              </button>
+              <button
+                onClick={() => setIsVoicePanelOpen(false)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg transition-all bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.15)] text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {voiceControlEnabled ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                    isListening ? 'bg-[#00d4ff]/20 border border-[#00d4ff] shadow-[0_0_15px_rgba(0,212,255,0.4)]' : 'bg-white/5 border border-white/10'
+                  }`}
+                >
+                  <span className={`text-lg ${isListening ? 'animate-pulse text-[#00d4ff]' : 'text-gray-500'}`}>🎤</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-inter font-bold text-gray-500 tracking-wider">LAST HEARD:</div>
+                  <div className="text-xs font-inter text-gray-200 italic truncate">
+                    {voiceTranscript ? `"${voiceTranscript}"` : 'Listening for your command...'}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-              <div className="text-[10px] font-inter font-bold text-gray-400 tracking-wider mb-1.5 uppercase">
-                Try saying on this step:
+              <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                <div className="text-[10px] font-inter font-bold text-gray-400 tracking-wider mb-1.5 uppercase">
+                  Try saying on this step:
+                </div>
+                <ul className="space-y-1 text-[11px] font-inter text-[#8888aa]">
+                  {step === 'greeting' && (
+                    <li>• <span className="text-[#00ff88]">"start"</span> / <span className="text-[#00ff88]">"next"</span> to select workout</li>
+                  )}
+                  {step === 'workout-select' && (
+                    <>
+                      <li>• <span className="text-[#00ff88]">"push up"</span> / <span className="text-[#00ff88]">"squat"</span> to choose</li>
+                      <li>• <span className="text-[#00ff88]">"confirm"</span> / <span className="text-[#00ff88]">"start"</span> to begin</li>
+                      <li>• <span className="text-[#00ff88]">"I want to do squats"</span> to update routine</li>
+                    </>
+                  )}
+                  {step === 'positioning' && (
+                    <li>• <span className="text-[#00ff88]">"ready"</span> / <span className="text-[#00ff88]">"start"</span> to begin set</li>
+                  )}
+                  {step === 'exercising' && (
+                    <li>• <span className="text-[#ff4d6d]">"done"</span> / <span className="text-[#ff4d6d]">"stop"</span> to end the set</li>
+                  )}
+                  {step === 'set-summary' && (
+                    <>
+                      <li>• <span className="text-[#00ff88]">"next set"</span> to continue</li>
+                      <li>• <span className="text-[#ff4d6d]">"end workout"</span> / <span className="text-[#ff4d6d]">"finish"</span> to end</li>
+                    </>
+                  )}
+                  {step === 'session-end' && (
+                    <>
+                      <li>• <span className="text-[#00ff88]">"new workout"</span> to restart</li>
+                      <li>• <span className="text-[#8888aa]">"dashboard"</span> / <span className="text-[#8888aa]">"home"</span> to exit</li>
+                    </>
+                  )}
+                </ul>
               </div>
-              <ul className="space-y-1 text-[11px] font-inter text-[#8888aa]">
-                {step === 'greeting' && (
-                  <li>• <span className="text-[#00ff88]">"start"</span> / <span className="text-[#00ff88]">"next"</span> to select workout</li>
-                )}
-                {step === 'workout-select' && (
-                  <>
-                    <li>• <span className="text-[#00ff88]">"push up"</span> / <span className="text-[#00ff88]">"squat"</span> to choose</li>
-                    <li>• <span className="text-[#00ff88]">"confirm"</span> / <span className="text-[#00ff88]">"start"</span> to begin</li>
-                    <li>• <span className="text-[#00ff88]">"I want to do squats"</span> to update routine</li>
-                  </>
-                )}
-                {step === 'positioning' && (
-                  <li>• <span className="text-[#00ff88]">"ready"</span> / <span className="text-[#00ff88]">"start"</span> to begin set</li>
-                )}
-                {step === 'exercising' && (
-                  <li>• <span className="text-[#ff4d6d]">"done"</span> / <span className="text-[#ff4d6d]">"stop"</span> to end the set</li>
-                )}
-                {step === 'set-summary' && (
-                  <>
-                    <li>• <span className="text-[#00ff88]">"next set"</span> to continue</li>
-                    <li>• <span className="text-[#ff4d6d]">"end workout"</span> / <span className="text-[#ff4d6d]">"finish"</span> to end</li>
-                  </>
-                )}
-                {step === 'session-end' && (
-                  <>
-                    <li>• <span className="text-[#00ff88]">"new workout"</span> to restart</li>
-                    <li>• <span className="text-[#8888aa]">"dashboard"</span> / <span className="text-[#8888aa]">"home"</span> to exit</li>
-                  </>
-                )}
-              </ul>
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-4 text-xs font-inter text-gray-500">
-            Voice control is offline. Click Activate to enable hands-free commands.
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="text-center py-4 text-xs font-inter text-gray-500">
+              Voice control is offline. Click Activate to enable hands-free commands.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quit Button (visible on all steps except session end) */}
       {step !== 'session-end' && (
