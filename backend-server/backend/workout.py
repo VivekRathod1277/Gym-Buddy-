@@ -853,7 +853,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
 
     mp_pose = mp.solutions.pose
-    pose = _make_pose(low_light=False)  # Step 10
+    pose_task = asyncio.create_task(asyncio.to_thread(_make_pose, False))
+    pose = None
     mp_drawing = mp.solutions.drawing_utils
     # Step 12: temporal smoothing — hold last confident landmarks
     _last_landmarks = None
@@ -888,14 +889,19 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 if "frame" in data:
                     frame = decode_base64_frame(data["frame"])
                     
-                    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    rgb_image.flags.writeable = False
-                    results = pose.process(rgb_image)
-                    rgb_image.flags.writeable = True
-
                     image = frame.copy()
 
-                    if results.pose_landmarks:
+                    if not pose_task.done():
+                        results = None
+                    else:
+                        if pose is None:
+                            pose = pose_task.result()
+                        rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        rgb_image.flags.writeable = False
+                        results = await asyncio.to_thread(pose.process, rgb_image)
+                        rgb_image.flags.writeable = True
+
+                    if results and getattr(results, "pose_landmarks", None):
                         # Premium skeleton overlay during auto-detect phase
                         draw_skeleton_overlay(image, results.pose_landmarks, has_fault=False)
 
@@ -1011,40 +1017,46 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
             # Step 13: enhance before pose estimation
             enhanced_frame, frame_class = enhance_if_needed(frame)
-            if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
-                pose.close()
-                pose = _make_pose(low_light=True)
-                pose._low_light_mode = True
-            elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
-                pose.close()
-                pose = _make_pose(low_light=False)
+            image = enhanced_frame.copy()
 
-            rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
-            rgb_image.flags.writeable = False
-            results = pose.process(rgb_image)
-            rgb_image.flags.writeable = True
+            if not pose_task.done():
+                results = None
+            else:
+                if pose is None:
+                    pose = pose_task.result()
+                    
+                if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
+                    pose.close()
+                    pose = await asyncio.to_thread(_make_pose, True)
+                    pose._low_light_mode = True
+                elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
+                    pose.close()
+                    pose = await asyncio.to_thread(_make_pose, False)
+
+                rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
+                rgb_image.flags.writeable = False
+                results = await asyncio.to_thread(pose.process, rgb_image)
+                rgb_image.flags.writeable = True
 
             # Step 12: temporal smoothing — hold last good skeleton on missed frames
-            if results.pose_landmarks:
+            if results and getattr(results, "pose_landmarks", None):
                 _last_landmarks = results.pose_landmarks
                 _lost_frames = 0
             elif _last_landmarks is not None and _lost_frames < _HOLD_FRAMES:
                 _lost_frames += 1
-                # Patch results with last known landmarks so downstream code runs
+                if results is None:
+                    class DummyRes: pass
+                    results = DummyRes()
                 results.pose_landmarks = _last_landmarks
             else:
                 _lost_frames += 1
 
             pose_confidence = (
                 results.pose_landmarks.landmark[0].visibility
-                if results.pose_landmarks else 0.0
+                if results and getattr(results, "pose_landmarks", None) else 0.0
             )
 
-            # Draw the skeleton on the enhanced frame so brightness/contrast improvements
-            # are visible in the output — previously used original frame (Bug 3 fix)
-            image = enhanced_frame.copy()
-
-            if results.pose_landmarks:
+            if results and getattr(results, "pose_landmarks", None):
                 # Premium skeleton overlay
                 draw_skeleton_overlay(image, results.pose_landmarks, has_fault=bool(display_fault))
 

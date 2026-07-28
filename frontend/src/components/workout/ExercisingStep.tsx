@@ -327,17 +327,17 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
         )}
         
         {!liveFrame && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50" style={{ zIndex: 3 }}>
-            <div className="text-center p-4 rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-center" style={{ zIndex: 3 }}>
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
               <div
-                className="w-12 h-12 rounded-full border-[3px] mx-auto mb-3"
+                className="w-4 h-4 rounded-full border-2"
                 style={{
                   borderColor: 'rgba(0, 212, 255, 0.2)',
                   borderTopColor: '#00d4ff',
                   animation: 'spin-loader 1s linear infinite',
                 }}
               />
-              <p className="text-white text-sm font-semibold tracking-wider font-inter drop-shadow-md">Connecting to analysis engine...</p>
+              <p className="text-white text-xs font-semibold tracking-wider font-inter">Initializing AI Engine...</p>
             </div>
           </div>
         )}
