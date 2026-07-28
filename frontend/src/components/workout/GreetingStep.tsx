@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useVoice } from '@/hooks/useVoice';
 import api from '@/lib/api';
 import BiomechanicalLoader from '@/components/BiomechanicalLoader';
@@ -14,6 +14,7 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
   const [displayedText, setDisplayedText] = useState('');
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +48,7 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
     const timer = setInterval(() => {
       idx++;
       setDisplayedText(greeting.slice(0, idx));
+      bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
       if (idx >= greeting.length) {
         clearInterval(timer);
         setTimeout(() => setReady(true), 800);
@@ -162,6 +164,7 @@ export default function GreetingStep({ onNext }: GreetingStepProps) {
           100% { transform: translateX(200%) skewX(-45deg); }
         }
       `}</style>
+      <div ref={bottomRef} className="h-10 w-full shrink-0" />
     </div>
   );
 }
