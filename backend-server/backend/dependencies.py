@@ -8,6 +8,9 @@ from backend.schemas import TokenData
 
 # Raise a hard error at startup if JWT_SECRET_KEY is not configured.
 # A hardcoded fallback is a security vulnerability — never use one in production.
+from dotenv import load_dotenv
+load_dotenv()
+
 _secret = os.getenv("JWT_SECRET_KEY")
 if not _secret:
     print(

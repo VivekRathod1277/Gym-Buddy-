@@ -134,42 +134,34 @@ class AIAdvisor:
         if not self.client:
             return "unknown"
 
-        for attempt in range(3):
-            try:
-                b64 = self._frame_to_base64(frame)
+        try:
+            b64 = self._frame_to_base64(frame)
 
-                prompt = (
-                    "Look at this gym image. Which exercise is the person performing or about to perform? "
-                    "Respond with exactly ONE word from this list: pushup, pullup, squat, bicep_curl, chest_press. "
-                    "If no person is clearly visible or they are not in a position to start any of these exercises, respond: unknown"
-                )
+            prompt = (
+                "Look at this gym image. Which exercise is the person performing or about to perform? "
+                "Respond with exactly ONE word from this list: pushup, pullup, squat, bicep_curl, chest_press. "
+                "If no person is clearly visible or they are not in a position to start any of these exercises, respond: unknown"
+            )
 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=self._build_vision_messages(prompt, b64),
-                    temperature=0.2,
-                    top_p=0.9,
-                    max_tokens=10,
-                    stream=False,
-                    timeout=15.0,
-                )
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=self._build_vision_messages(prompt, b64),
+                temperature=0.2,
+                top_p=0.9,
+                max_tokens=10,
+                stream=False,
+                timeout=5.0,
+            )
 
-                exercise = response.choices[0].message.content.strip().lower()
+            exercise = response.choices[0].message.content.strip().lower()
 
-                valid = ["pushup", "pullup", "squat", "bicep_curl", "chest_press"]
-                for ex in valid:
-                    if ex in exercise:
-                        return ex
+            valid = ["pushup", "pullup", "squat", "bicep_curl", "chest_press"]
+            for ex in valid:
+                if ex in exercise:
+                    return ex
 
-                return "unknown"
+            return "unknown"
 
-            except Exception as e:
-                import time
-                if "429" in str(e):
-                    print(f"[AIAdvisor] Rate limit hit (attempt {attempt+1}/3). Waiting...", flush=True)
-                    time.sleep(15) # Wait for rate limit to reset
-                else:
-                    print(f"[AIAdvisor] Exercise detection error: {e}")
-                    return "unknown"
-        
-        return "unknown"
+        except Exception as e:
+            print(f"[AIAdvisor] Exercise detection error: {e}")
+            return "unknown"

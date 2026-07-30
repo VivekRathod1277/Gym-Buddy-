@@ -865,6 +865,7 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
         try:
             detected_exercise = None
             is_detecting = False
+            last_detect_time = 0.0
             # Bug fix: previously this loop had no exit condition other than a
             # successful detection. If the AI advisor is unavailable (missing/
             # invalid NVIDIA_API_KEY, rate limit, network error) detect_exercise()
@@ -905,8 +906,9 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                         # Premium skeleton overlay during auto-detect phase
                         draw_skeleton_overlay(image, results.pose_landmarks, has_fault=False)
 
-                    if not is_detecting:
+                    if not is_detecting and (time.time() - last_detect_time > 2.0):
                         is_detecting = True
+                        last_detect_time = time.time()
                         print("[WS] Auto-detecting exercise from frame...", flush=True)
                         async def run_detection(f):
                             try:
