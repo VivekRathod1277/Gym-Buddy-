@@ -16,6 +16,10 @@ MODEL_PATH   = os.path.join("models", "posture_classifier.pkl")
 ENCODER_PATH = os.path.join("models", "label_encoder.pkl")
 
 
+_cached_model = None
+_cached_encoder = None
+_is_loaded = False
+
 class PostureClassifier:
     """
     Custom posture classification model trained on labeled landmark data.
@@ -24,9 +28,17 @@ class PostureClassifier:
     """
 
     def __init__(self):
-        self.model   = None
-        self.encoder = None
-        self._load()
+        global _cached_model, _cached_encoder, _is_loaded
+        if not _is_loaded:
+            self.model   = None
+            self.encoder = None
+            self._load()
+            _cached_model = self.model
+            _cached_encoder = self.encoder
+            _is_loaded = True
+        else:
+            self.model = _cached_model
+            self.encoder = _cached_encoder
 
     def _load(self):
         if os.path.exists(MODEL_PATH) and os.path.exists(ENCODER_PATH):
