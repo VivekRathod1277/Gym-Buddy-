@@ -42,6 +42,22 @@ def _make_pose(low_light: bool = False):
         min_detection_confidence=POSE_DETECTION_CONFIDENCE,
         min_tracking_confidence=tracking_conf,
     )
+
+def _prewarm_mediapipe():
+    """Pre-warm MediaPipe to cache TFLite model in process memory.
+    This eliminates the ~1-2s cold-start penalty on the first real connection.
+    """
+    try:
+        pose = _make_pose(low_light=False)
+        dummy = np.zeros((240, 320, 3), dtype=np.uint8)
+        pose.process(cv2.cvtColor(dummy, cv2.COLOR_BGR2RGB))
+        pose.close()
+        print("[STARTUP] MediaPipe Pose pre-warmed successfully", flush=True)
+    except Exception as e:
+        print(f"[STARTUP] MediaPipe pre-warm failed: {e}", flush=True)
+
+# Fire pre-warming in a background thread at import time
+threading.Thread(target=_prewarm_mediapipe, daemon=True).start()
 # ─────────────────────────────────────────────────────────────────────────────
 
 router = APIRouter(prefix="/api/workout", tags=["workout"])
@@ -853,8 +869,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
 
     mp_pose = mp.solutions.pose
-    pose_task = asyncio.create_task(asyncio.to_thread(_make_pose, False))
-    pose = None
+    # Pre-warmed MediaPipe means _make_pose is now fast (~50ms vs ~1-2s)
+    pose = _make_pose(low_light=False)
     mp_drawing = mp.solutions.drawing_utils
     # Step 12: temporal smoothing — hold last confident landmarks
     _last_landmarks = None
@@ -892,15 +908,10 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                     
                     image = frame.copy()
 
-                    if not pose_task.done():
-                        results = None
-                    else:
-                        if pose is None:
-                            pose = pose_task.result()
-                        rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        rgb_image.flags.writeable = False
-                        results = await asyncio.to_thread(pose.process, rgb_image)
-                        rgb_image.flags.writeable = True
+                    rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    rgb_image.flags.writeable = False
+                    results = await asyncio.to_thread(pose.process, rgb_image)
+                    rgb_image.flags.writeable = True
 
                     if results and getattr(results, "pose_landmarks", None):
                         # Premium skeleton overlay during auto-detect phase
@@ -1017,28 +1028,39 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
             processed_count += 1
 
+            # Fast-path: first 2 frames skip heavy processing for instant response
+            if processed_count <= 2:
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 40])
+                out_b64 = base64.b64encode(buffer).decode('utf-8')
+                await websocket.send_json({
+                    "status": "processing",
+                    "frame": out_b64,
+                    "reps": 0,
+                    "angle": 0,
+                    "fault": None,
+                    "ai_tip": tip_text,
+                    "exercise": exercise_name,
+                    "pose_confidence": 0.0
+                })
+                await asyncio.sleep(0)
+                continue
+
             # Step 13: enhance before pose estimation
             enhanced_frame, frame_class = enhance_if_needed(frame)
             image = enhanced_frame.copy()
 
-            if not pose_task.done():
-                results = None
-            else:
-                if pose is None:
-                    pose = pose_task.result()
-                    
-                if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
-                    pose.close()
-                    pose = await asyncio.to_thread(_make_pose, True)
-                    pose._low_light_mode = True
-                elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
-                    pose.close()
-                    pose = await asyncio.to_thread(_make_pose, False)
+            if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=True)
+                pose._low_light_mode = True
+            elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
+                pose.close()
+                pose = _make_pose(low_light=False)
 
-                rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
-                rgb_image.flags.writeable = False
-                results = await asyncio.to_thread(pose.process, rgb_image)
-                rgb_image.flags.writeable = True
+            rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
+            rgb_image.flags.writeable = False
+            results = await asyncio.to_thread(pose.process, rgb_image)
+            rgb_image.flags.writeable = True
 
             # Step 12: temporal smoothing — hold last good skeleton on missed frames
             if results and getattr(results, "pose_landmarks", None):

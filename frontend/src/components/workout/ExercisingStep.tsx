@@ -326,7 +326,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           />
         )}
         
-        {!liveFrame && (
+        {!connected && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-center" style={{ zIndex: 3 }}>
             <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
               <div
@@ -337,7 +337,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
                   animation: 'spin-loader 1s linear infinite',
                 }}
               />
-              <p className="text-white text-xs font-semibold tracking-wider font-inter">Initializing AI Engine...</p>
+              <p className="text-white text-xs font-semibold tracking-wider font-inter">Connecting to AI Engine...</p>
             </div>
           </div>
         )}
