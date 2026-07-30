@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const hostname = window.location.hostname;
-const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+const isIpAddress = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
+const isLocal = hostname === 'localhost' || isIpAddress;
 
 // If we're on a local network, try to connect to the local python backend by default.
 // Otherwise, use the production render URL.
