@@ -134,57 +134,109 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           await videoRef.current.play();
         }
 
-        // WebSocket — pass actual exercise, not "auto"
-        const ws = new WebSocket(`${WS_URL}/api/workout/ws/live-stream?exercise=${exercise}`);
+        // Wake up the backend (Render free tier sleeps after inactivity)
+        const API_BASE_URL = WS_URL.replace('wss://', 'https://').replace('ws://', 'http://');
+        try {
+          await fetch(API_BASE_URL, { mode: 'cors' }).catch(() => {});
+        } catch { /* ignore wake-up errors */ }
+
+        // WebSocket with retry logic for cold-start scenarios
+        const MAX_RETRIES = 3;
+        let retryCount = 0;
+
+        const connectWs = (): Promise<WebSocket> => {
+          return new Promise((resolve, reject) => {
+            if (cancelled) { reject(new Error('cancelled')); return; }
+            const ws = new WebSocket(`${WS_URL}/api/workout/ws/live-stream?exercise=${exercise}`);
+            const timeout = setTimeout(() => {
+              ws.close();
+              reject(new Error('timeout'));
+            }, 20000); // 20s timeout per attempt
+
+            ws.onopen = () => {
+              clearTimeout(timeout);
+              resolve(ws);
+            };
+            ws.onerror = () => {
+              clearTimeout(timeout);
+              reject(new Error('ws_error'));
+            };
+            ws.onclose = () => {
+              clearTimeout(timeout);
+              reject(new Error('ws_closed'));
+            };
+          });
+        };
+
+        let ws: WebSocket | null = null;
+        while (retryCount < MAX_RETRIES && !cancelled) {
+          try {
+            ws = await connectWs();
+            break; // Connected!
+          } catch (e: any) {
+            retryCount++;
+            if (e.message === 'cancelled' || cancelled) break;
+            console.warn(`[WS] Connection attempt ${retryCount} failed, ${retryCount < MAX_RETRIES ? 'retrying...' : 'giving up'}`);
+            if (retryCount < MAX_RETRIES) {
+              // Wait before retry, and ping backend to ensure it's awake
+              await new Promise(r => setTimeout(r, 2000));
+              await fetch(API_BASE_URL, { mode: 'cors' }).catch(() => {});
+            }
+          }
+        }
+
+        if (!ws || cancelled) {
+          if (!cancelled) addToast('Could not connect to the AI backend. Please try again.', 'error');
+          return;
+        }
+
         wsRef.current = ws;
 
         let isProcessingFrame = false;
 
-        ws.onopen = () => {
-          if (cancelled) { ws.close(); return; }
-          setConnected(true);
-          speak(`Set ${setNumber}. Let's go!`);
-          intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
+        ws.onopen = null; // Already handled above
+        setConnected(true);
+        speak(`Set ${setNumber}. Let's go!`);
+        intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
 
-          // Breathing reminders every 30s
-          breathingTimerRef.current = setInterval(() => {
-            speak("Remember to breathe. Exhale on the effort.");
-          }, 30000);
+        // Breathing reminders every 30s
+        breathingTimerRef.current = setInterval(() => {
+          speak("Remember to breathe. Exhale on the effort.");
+        }, 30000);
 
-          const sendFrame = () => {
-            if (ws.readyState !== WebSocket.OPEN) return;
-            if (isProcessingFrame) {
-              requestAnimationFrame(sendFrame);
-              return;
-            }
-            if (videoRef.current && canvasRef.current) {
-              const canvas = canvasRef.current;
-              const video = videoRef.current;
-              if (video.videoWidth > 0 && video.videoHeight > 0) {
-                const MAX_WIDTH = 480;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                  let w = video.videoWidth;
-                  let h = video.videoHeight;
-                  const maxDim = Math.max(w, h);
-                  if (maxDim > MAX_WIDTH) {
-                    const scale = MAX_WIDTH / maxDim;
-                    w = Math.floor(w * scale);
-                    h = Math.floor(h * scale);
-                  }
-                  canvas.width = w;
-                  canvas.height = h;
-                  ctx.drawImage(video, 0, 0, w, h);
-                  const b64 = canvas.toDataURL('image/jpeg', 0.6);
-                  isProcessingFrame = true;
-                  ws.send(JSON.stringify({ frame: b64, exercise }));
+        const sendFrame = () => {
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
+          if (isProcessingFrame) {
+            requestAnimationFrame(sendFrame);
+            return;
+          }
+          if (videoRef.current && canvasRef.current) {
+            const canvas = canvasRef.current;
+            const video = videoRef.current;
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              const MAX_WIDTH = 480;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                let w = video.videoWidth;
+                let h = video.videoHeight;
+                const maxDim = Math.max(w, h);
+                if (maxDim > MAX_WIDTH) {
+                  const scale = MAX_WIDTH / maxDim;
+                  w = Math.floor(w * scale);
+                  h = Math.floor(h * scale);
                 }
+                canvas.width = w;
+                canvas.height = h;
+                ctx.drawImage(video, 0, 0, w, h);
+                const b64 = canvas.toDataURL('image/jpeg', 0.6);
+                isProcessingFrame = true;
+                ws.send(JSON.stringify({ frame: b64, exercise }));
               }
             }
-            requestAnimationFrame(sendFrame);
-          };
+          }
           requestAnimationFrame(sendFrame);
         };
+        requestAnimationFrame(sendFrame);
 
         ws.onmessage = (event) => {
           isProcessingFrame = false;

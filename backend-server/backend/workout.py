@@ -869,8 +869,9 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
 
     mp_pose = mp.solutions.pose
-    # Pre-warmed MediaPipe means _make_pose is now fast (~50ms vs ~1-2s)
-    pose = _make_pose(low_light=False)
+    # Pre-warmed MediaPipe means _make_pose is now fast — but still must
+    # run in a thread to avoid blocking the async event loop.
+    pose = await asyncio.to_thread(_make_pose, False)
     mp_drawing = mp.solutions.drawing_utils
     # Step 12: temporal smoothing — hold last confident landmarks
     _last_landmarks = None
@@ -1051,11 +1052,11 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
             if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
                 pose.close()
-                pose = _make_pose(low_light=True)
+                pose = await asyncio.to_thread(_make_pose, True)
                 pose._low_light_mode = True
             elif frame_class != "low_light" and hasattr(pose, "_low_light_mode"):
                 pose.close()
-                pose = _make_pose(low_light=False)
+                pose = await asyncio.to_thread(_make_pose, False)
 
             rgb_image = cv2.cvtColor(enhanced_frame, cv2.COLOR_BGR2RGB)
             rgb_image.flags.writeable = False
