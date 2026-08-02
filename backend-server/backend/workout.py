@@ -869,9 +869,9 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
 
     mp_pose = mp.solutions.pose
-    # Pre-warmed MediaPipe means _make_pose is now fast — but still must
-    # run in a thread to avoid blocking the async event loop.
-    pose = await asyncio.to_thread(_make_pose, False)
+    # Start loading pose in the background so we can enter the websocket loop instantly
+    pose_task = asyncio.create_task(asyncio.to_thread(_make_pose, False))
+    pose = None
     mp_drawing = mp.solutions.drawing_utils
     # Step 12: temporal smoothing — hold last confident landmarks
     _last_landmarks = None
@@ -1029,28 +1029,36 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
 
             processed_count += 1
 
-            # Fast-path: first 2 frames skip heavy processing for instant response
-            if processed_count <= 2:
+            # Fast-path or Warming up: skip heavy processing for instant response
+            if processed_count <= 2 or not pose_task.done():
                 _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 40])
                 out_b64 = base64.b64encode(buffer).decode('utf-8')
+                
+                warmup_msg = tip_text if pose_task.done() else "AI Engine is warming up..."
+                
                 await websocket.send_json({
                     "status": "processing",
                     "frame": out_b64,
                     "reps": 0,
                     "angle": 0,
                     "fault": None,
-                    "ai_tip": tip_text,
+                    "ai_tip": warmup_msg,
                     "exercise": exercise_name,
                     "pose_confidence": 0.0
                 })
                 await asyncio.sleep(0)
                 continue
+                
+            if pose is None and pose_task.done():
+                pose = pose_task.result()
 
             # Step 13: enhance before pose estimation
             enhanced_frame, frame_class = enhance_if_needed(frame)
             image = enhanced_frame.copy()
 
             if frame_class == "low_light" and not hasattr(pose, "_low_light_mode"):
+                # We do this synchronously for now as low light changes are rare
+                # and we already have a pose instance initialized
                 pose.close()
                 pose = await asyncio.to_thread(_make_pose, True)
                 pose._low_light_mode = True
