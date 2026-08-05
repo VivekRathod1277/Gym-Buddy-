@@ -869,10 +869,32 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     exercise_file = exercise if exercise.endswith(".json") else f"{exercise}.json"
 
     mp_pose = mp.solutions.pose
-    # Start loading pose in the background so we can enter the websocket loop instantly
-    pose_task = asyncio.create_task(asyncio.to_thread(_make_pose, False))
-    pose = None
     mp_drawing = mp.solutions.drawing_utils
+
+    # Wait for MediaPipe to load before entering the main loop.
+    # On Render free tier (0.1 vCPU) this can take a few seconds.
+    # Sending a status message first so the client knows we are alive.
+    try:
+        await websocket.send_json({"status": "processing", "reps": 0, "angle": 0, "fault": None, "ai_tip": "AI Engine starting up...", "exercise": exercise, "pose_confidence": 0.0})
+        pose = await asyncio.wait_for(asyncio.to_thread(_make_pose, False), timeout=30.0)
+        print("[WS] MediaPipe Pose loaded and ready.", flush=True)
+    except asyncio.TimeoutError:
+        print("[WS] Pose model load timed out after 30s — aborting session.", flush=True)
+        try:
+            await websocket.send_json({"status": "failed", "error": "AI Engine failed to start. Please try again."})
+        except Exception:
+            pass
+        await websocket.close()
+        return
+    except Exception as e:
+        print(f"[WS] Pose model load error: {e}", flush=True)
+        try:
+            await websocket.send_json({"status": "failed", "error": f"AI Engine error: {str(e)}"})
+        except Exception:
+            pass
+        await websocket.close()
+        return
+
     # Step 12: temporal smoothing — hold last confident landmarks
     _last_landmarks = None
     _lost_frames = 0
@@ -1011,11 +1033,36 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
         angle = 0
         processed_count = 0
         ai_last_trigger = 0
+        last_receive_time = time.time()
+
+        # ── Keepalive task ─────────────────────────────────────────────────────
+        # Render's free-tier load balancer closes WebSocket connections that
+        # have been idle (no data sent) for ~55 seconds. We send a lightweight
+        # JSON ping every 30 seconds to keep the tunnel open.
+        async def _keepalive():
+            try:
+                while True:
+                    await asyncio.sleep(30)
+                    try:
+                        await websocket.send_json({"status": "ping"})
+                        print("[WS] Keepalive ping sent.", flush=True)
+                    except Exception:
+                        break  # WS already closed
+            except asyncio.CancelledError:
+                pass
+
+        keepalive_task = asyncio.create_task(_keepalive())
 
         while True:
             data = await websocket.receive_json()
+            last_receive_time = time.time()
+
             if "status" in data and data["status"] == "stop":
                 break
+
+            # Ignore keepalive pings echoed back from client
+            if data.get("status") == "ping":
+                continue
 
             if "frame" not in data:
                 continue
@@ -1028,29 +1075,6 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
                 continue
 
             processed_count += 1
-
-            # Fast-path or Warming up: skip heavy processing for instant response
-            if processed_count <= 2 or not pose_task.done():
-                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 40])
-                out_b64 = base64.b64encode(buffer).decode('utf-8')
-                
-                warmup_msg = tip_text if pose_task.done() else "AI Engine is warming up..."
-                
-                await websocket.send_json({
-                    "status": "processing",
-                    "frame": out_b64,
-                    "reps": 0,
-                    "angle": 0,
-                    "fault": None,
-                    "ai_tip": warmup_msg,
-                    "exercise": exercise_name,
-                    "pose_confidence": 0.0
-                })
-                await asyncio.sleep(0)
-                continue
-                
-            if pose is None and pose_task.done():
-                pose = pose_task.result()
 
             # Step 13: enhance before pose estimation
             enhanced_frame, frame_class = enhance_if_needed(frame)
@@ -1142,6 +1166,8 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
             
             await asyncio.sleep(0)
 
+        keepalive_task.cancel()
+
         # On stop
         session_data = engine.get_session_data()
         from core.database import save_session
@@ -1174,10 +1200,17 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
         import traceback
         traceback.print_exc()
         try:
+            keepalive_task.cancel()
+        except Exception:
+            pass
+        try:
             await websocket.send_json({"status": "failed", "error": f"Server error: {str(exc)}"})
         except Exception:
             pass
-        await websocket.close()
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 

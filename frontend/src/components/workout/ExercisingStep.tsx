@@ -23,6 +23,8 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
   const [elapsedTime, setElapsedTime] = useState(0);
   const [lowPoseConfidence, setLowPoseConfidence] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [reconnectCount, setReconnectCount] = useState(0);
+  const [connectStatusMsg, setConnectStatusMsg] = useState('Connecting to AI Engine...');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>(
     (localStorage.getItem('cameraFacingMode') as 'user' | 'environment') || 'environment'
   );
@@ -64,6 +66,8 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
   const lowConfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collectedFaultsRef = useRef<string[]>([]);
   const lastAiTipRef = useRef('');
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelledRef = useRef(false);
   // Breathing reminders
   const breathingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -94,6 +98,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
     if (breathingTimerRef.current) clearInterval(breathingTimerRef.current);
     if (faultTimeoutRef.current) clearTimeout(faultTimeoutRef.current);
     if (lowConfTimerRef.current) clearTimeout(lowConfTimerRef.current);
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
 
     speak(`Set ${setNumber} complete! ${reps} reps. Nice work!`);
     onSetComplete(reps, collectedFaultsRef.current, lastAiTipRef.current || aiTip);
@@ -112,25 +117,54 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
 
   // Start webcam + WebSocket
   useEffect(() => {
-    let cancelled = false;
+    cancelledRef.current = false;
+    let attemptCount = 0;
+    const MAX_RECONNECT_ATTEMPTS = 8;
+
+    const connectWs = (): Promise<WebSocket> => {
+      return new Promise((resolve, reject) => {
+        if (cancelledRef.current) { reject(new Error('cancelled')); return; }
+        const ws = new WebSocket(`${WS_URL}/api/workout/ws/live-stream?exercise=${exercise}`);
+        // Each attempt gets a bit more time: 20s, 25s, 30s …
+        const timeoutMs = Math.min(20000 + attemptCount * 5000, 40000);
+        const timeout = setTimeout(() => {
+          ws.close();
+          reject(new Error('timeout'));
+        }, timeoutMs);
+
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          resolve(ws);
+        };
+        ws.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('ws_error'));
+        };
+        ws.onclose = () => {
+          clearTimeout(timeout);
+          reject(new Error('ws_closed'));
+        };
+      });
+    };
 
     const startExercising = async () => {
       try {
-        // Camera
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: localStorage.getItem('cameraFacingMode') || 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 },
-          },
-          audio: false,
-        });
-        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
-
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        // Camera (only acquire once on first attempt)
+        if (!streamRef.current) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: localStorage.getItem('cameraFacingMode') || 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 },
+            },
+            audio: false,
+          });
+          if (cancelledRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+          streamRef.current = stream;
+        }
+        if (videoRef.current && !videoRef.current.srcObject) {
+          videoRef.current.srcObject = streamRef.current;
           await videoRef.current.play();
         }
 
@@ -140,62 +174,42 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           await fetch(API_BASE_URL, { mode: 'cors' }).catch(() => {});
         } catch { /* ignore wake-up errors */ }
 
-        // WebSocket with retry logic for cold-start scenarios
-        const MAX_RETRIES = 3;
-        let retryCount = 0;
-
-        const connectWs = (): Promise<WebSocket> => {
-          return new Promise((resolve, reject) => {
-            if (cancelled) { reject(new Error('cancelled')); return; }
-            const ws = new WebSocket(`${WS_URL}/api/workout/ws/live-stream?exercise=${exercise}`);
-            const timeout = setTimeout(() => {
-              ws.close();
-              reject(new Error('timeout'));
-            }, 20000); // 20s timeout per attempt
-
-            ws.onopen = () => {
-              clearTimeout(timeout);
-              resolve(ws);
-            };
-            ws.onerror = () => {
-              clearTimeout(timeout);
-              reject(new Error('ws_error'));
-            };
-            ws.onclose = () => {
-              clearTimeout(timeout);
-              reject(new Error('ws_closed'));
-            };
-          });
-        };
-
+        // Connect (with retry loop)
         let ws: WebSocket | null = null;
-        while (retryCount < MAX_RETRIES && !cancelled) {
+        while (attemptCount < MAX_RECONNECT_ATTEMPTS && !cancelledRef.current) {
+          const isReconnect = attemptCount > 0;
+          const label = isReconnect
+            ? `Reconnecting... (attempt ${attemptCount}/${MAX_RECONNECT_ATTEMPTS - 1})`
+            : 'Connecting to AI Engine...';
+          setConnectStatusMsg(label);
+          if (isReconnect) setReconnectCount(attemptCount);
+
           try {
             ws = await connectWs();
             break; // Connected!
           } catch (e: any) {
-            retryCount++;
-            if (e.message === 'cancelled' || cancelled) break;
-            console.warn(`[WS] Connection attempt ${retryCount} failed, ${retryCount < MAX_RETRIES ? 'retrying...' : 'giving up'}`);
-            if (retryCount < MAX_RETRIES) {
-              // Wait before retry, and ping backend to ensure it's awake
-              await new Promise(r => setTimeout(r, 2000));
+            attemptCount++;
+            if (e.message === 'cancelled' || cancelledRef.current) return;
+            console.warn(`[WS] Attempt ${attemptCount} failed (${e.message}), ${attemptCount < MAX_RECONNECT_ATTEMPTS ? 'retrying...' : 'giving up'}`);
+            if (attemptCount < MAX_RECONNECT_ATTEMPTS) {
+              // Exponential backoff: 3s, 6s, 9s …
+              const delay = Math.min(3000 * attemptCount, 15000);
+              await new Promise(r => { reconnectTimerRef.current = setTimeout(r, delay); });
+              reconnectTimerRef.current = null;
+              // Re-ping backend to wake it if it slept again
               await fetch(API_BASE_URL, { mode: 'cors' }).catch(() => {});
             }
           }
         }
 
-        if (!ws || cancelled) {
-          if (!cancelled) addToast('Could not connect to the AI backend. Please try again.', 'error');
+        if (!ws || cancelledRef.current) {
+          if (!cancelledRef.current) addToast('Could not connect to the AI backend after several attempts. Please try again.', 'error');
           return;
         }
 
         wsRef.current = ws;
-
-        let isProcessingFrame = false;
-
-        ws.onopen = null; // Already handled above
         setConnected(true);
+        setConnectStatusMsg('Connecting to AI Engine...');
         speak(`Set ${setNumber}. Let's go!`);
         intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
 
@@ -203,6 +217,8 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
         breathingTimerRef.current = setInterval(() => {
           speak("Remember to breathe. Exhale on the effort.");
         }, 30000);
+
+        let isProcessingFrame = false;
 
         const sendFrame = () => {
           if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -239,16 +255,18 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
         requestAnimationFrame(sendFrame);
 
         ws.onmessage = (event) => {
-          isProcessingFrame = false;
           const data = JSON.parse(event.data);
 
+          // Handle server keepalive ping — ignore it silently
+          if (data.status === 'ping') return;
+
           if (data.status === 'processing') {
+            isProcessingFrame = false;
             if (data.frame) setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
             if (data.reps !== undefined) {
               setReps(prev => {
                 if (data.reps > prev) {
                   speak(`${data.reps}`);
-                  // Motivational pushes at certain rep counts
                   if (data.reps === 5) speak("Five reps! Keep it up!");
                   else if (data.reps === 10) speak("Ten! You're on fire!");
                   else if (data.reps % 5 === 0 && data.reps > 10) speak("Great pace! Don't stop now!");
@@ -291,30 +309,40 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
         };
 
         ws.onerror = () => {
-          setConnected(false);
-          addToast('Connection error with the backend.', 'error');
+          isProcessingFrame = false;
+          // Will trigger onclose next — reconnect logic lives there
         };
 
         ws.onclose = () => {
+          if (cancelledRef.current) return; // User stopped the set intentionally
           setConnected(false);
+          console.warn('[WS] Connection dropped — scheduling reconnect...');
+          // Reconnect automatically
+          reconnectTimerRef.current = setTimeout(() => {
+            reconnectTimerRef.current = null;
+            startExercising();
+          }, 2000);
         };
 
       } catch (err: any) {
-        console.error('ExercisingStep init error:', err);
-        addToast(err.message || 'Failed to start exercise.', 'error');
+        if (!cancelledRef.current) {
+          console.error('ExercisingStep init error:', err);
+          addToast(err.message || 'Failed to start exercise.', 'error');
+        }
       }
     };
 
     startExercising();
 
     return () => {
-      cancelled = true;
-      if (wsRef.current) wsRef.current.close();
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      cancelledRef.current = true;
+      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
+      if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (breathingTimerRef.current) clearInterval(breathingTimerRef.current);
       if (faultTimeoutRef.current) clearTimeout(faultTimeoutRef.current);
       if (lowConfTimerRef.current) clearTimeout(lowConfTimerRef.current);
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     };
   }, [exercise, setNumber, speak, addToast, triggerFault]);
 
@@ -384,12 +412,12 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
               <div
                 className="w-4 h-4 rounded-full border-2"
                 style={{
-                  borderColor: 'rgba(0, 212, 255, 0.2)',
-                  borderTopColor: '#00d4ff',
+                  borderColor: reconnectCount > 0 ? 'rgba(255, 190, 0, 0.2)' : 'rgba(0, 212, 255, 0.2)',
+                  borderTopColor: reconnectCount > 0 ? '#ffbe00' : '#00d4ff',
                   animation: 'spin-loader 1s linear infinite',
                 }}
               />
-              <p className="text-white text-xs font-semibold tracking-wider font-inter">Connecting to AI Engine...</p>
+              <p className="text-white text-xs font-semibold tracking-wider font-inter">{connectStatusMsg}</p>
             </div>
           </div>
         )}
