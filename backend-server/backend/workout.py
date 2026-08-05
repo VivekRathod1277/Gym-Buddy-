@@ -872,16 +872,18 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
     mp_drawing = mp.solutions.drawing_utils
 
     # Wait for MediaPipe to load before entering the main loop.
-    # On Render free tier (0.1 vCPU) this can take a few seconds.
-    # Sending a status message first so the client knows we are alive.
+    # On Render free tier (0.1 vCPU) cold-starts can take 30-60s.
+    # We send a status message immediately so the client sees the WS is alive,
+    # then block until pose is ready (up to 90s).
+    keepalive_task = None  # Defined here so exception handler can safely reference it
     try:
         await websocket.send_json({"status": "processing", "reps": 0, "angle": 0, "fault": None, "ai_tip": "AI Engine starting up...", "exercise": exercise, "pose_confidence": 0.0})
-        pose = await asyncio.wait_for(asyncio.to_thread(_make_pose, False), timeout=30.0)
+        pose = await asyncio.wait_for(asyncio.to_thread(_make_pose, False), timeout=90.0)
         print("[WS] MediaPipe Pose loaded and ready.", flush=True)
     except asyncio.TimeoutError:
-        print("[WS] Pose model load timed out after 30s — aborting session.", flush=True)
+        print("[WS] Pose model load timed out after 90s — aborting session.", flush=True)
         try:
-            await websocket.send_json({"status": "failed", "error": "AI Engine failed to start. Please try again."})
+            await websocket.send_json({"status": "failed", "error": "AI Engine timed out. Please try again."})
         except Exception:
             pass
         await websocket.close()
@@ -1199,10 +1201,11 @@ async def live_stream_ws(websocket: WebSocket, exercise: str = "auto", user_id: 
         print(f"Live stream error: {exc}", flush=True)
         import traceback
         traceback.print_exc()
-        try:
-            keepalive_task.cancel()
-        except Exception:
-            pass
+        if keepalive_task is not None:
+            try:
+                keepalive_task.cancel()
+            except Exception:
+                pass
         try:
             await websocket.send_json({"status": "failed", "error": f"Server error: {str(exc)}"})
         except Exception:

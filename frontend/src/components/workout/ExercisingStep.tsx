@@ -209,7 +209,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
 
         wsRef.current = ws;
         setConnected(true);
-        setConnectStatusMsg('Connecting to AI Engine...');
+        setConnectStatusMsg('AI Engine loading...');
         speak(`Set ${setNumber}. Let's go!`);
         intervalRef.current = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
 
@@ -219,9 +219,27 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
         }, 30000);
 
         let isProcessingFrame = false;
+        let backendReady = false; // True once backend sends first 'processing' message
+
+        // During backend startup (pose model loading, up to 90s), send lightweight
+        // JSON pings every 20s to keep Render's proxy from killing the idle WS.
+        // Once backend is ready, this interval is cleared and frame sending begins.
+        const startupPingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN && !backendReady) {
+            try {
+              ws.send(JSON.stringify({ status: 'ping' }));
+              console.log('[WS] Startup ping sent while waiting for backend...');
+            } catch (_) {}
+          }
+        }, 20000);
 
         const sendFrame = () => {
           if (!ws || ws.readyState !== WebSocket.OPEN) return;
+          if (!backendReady) {
+            // Backend still loading — don't send frames yet, just schedule retry
+            requestAnimationFrame(sendFrame);
+            return;
+          }
           if (isProcessingFrame) {
             requestAnimationFrame(sendFrame);
             return;
@@ -260,8 +278,19 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           // Handle server keepalive ping — ignore it silently
           if (data.status === 'ping') return;
 
+          // Any message from the server means the connection is live
+          // Reset the processing flag so frames keep flowing
+          isProcessingFrame = false;
+
           if (data.status === 'processing') {
-            isProcessingFrame = false;
+            // First 'processing' message — backend is fully ready, start frame sending
+            if (!backendReady) {
+              backendReady = true;
+              clearInterval(startupPingInterval);
+              setConnectStatusMsg('Connecting to AI Engine...');
+              requestAnimationFrame(sendFrame); // kick off frame loop
+              console.log('[WS] Backend ready — starting frame stream.');
+            }
             if (data.frame) setLiveFrame(`data:image/jpeg;base64,${data.frame}`);
             if (data.reps !== undefined) {
               setReps(prev => {
@@ -305,16 +334,22 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
                 setLowPoseConfidence(false);
               }
             }
+          } else if (data.status === 'failed') {
+            // Server reported a fatal error — log it but let onclose handle reconnect
+            console.error('[WS] Server reported failure:', data.error);
+            // Don't show a toast here — reconnect will happen automatically via onclose
           }
         };
 
         ws.onerror = () => {
           isProcessingFrame = false;
+          clearInterval(startupPingInterval);
           // Will trigger onclose next — reconnect logic lives there
         };
 
         ws.onclose = () => {
           if (cancelledRef.current) return; // User stopped the set intentionally
+          clearInterval(startupPingInterval);
           setConnected(false);
           console.warn('[WS] Connection dropped — scheduling reconnect...');
           // Reconnect automatically
@@ -406,7 +441,7 @@ export default function ExercisingStep({ exercise, setNumber, onSetComplete }: E
           />
         )}
         
-        {!connected && (
+        {(!connected || connectStatusMsg === 'AI Engine loading...') && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center justify-center" style={{ zIndex: 3 }}>
             <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
               <div
